@@ -1,0 +1,197 @@
+{
+    "autoload": true,
+    "fileaddress": "wanzicun_load.csv",
+    "province": "内蒙古自治区",
+    "city": "鄂尔多斯市",
+    "heating_cycle": {"start": "10-01", "end": "05-01"},
+    "cooling_cycle": {"start": "07-01", "end": "09-30"},
+    "location": [
+        34.4533,
+        110.1500
+    ],
+    "load_area": 239992,
+    "industrial_load": {
+        "flag": true,
+        "industrial_mode": {
+            "single_peak": [
+                0,
+                0
+            ],
+            "double_peak": [
+                0,
+                0
+            ],
+            "midday_trough": [
+                0,
+                0
+            ],
+            "relatively_uniform": [
+                0,
+                0
+            ],
+            "nighttime_energy_usage": [
+                0,
+                0
+            ]
+        }
+    },
+    "cooling_heating_power": [
+        {
+            "name": "xx公寓",
+            "type": "apartment",
+            "target_area": 2366.41,
+            "idf_file": "320.idf",
+            "epw_file": "CHN_Shaanxi.Xian.570360_CSWD.epw",
+            "heating_cycle": {"start": "10-01", "end": "05-01"},
+            "cooling_cycle": {"start": "07-01", "end": "09-30"},
+            "materials": [
+                {
+                    "material_name": "XIAN_Wenjiaoyuan_22_Wall_4_.015",
+                    "new_thickness": 0.02,
+                    "new_conductivity": 1.5
+                },
+                {
+                    "material_name": "XIAN_Wenjiaoyuan_22_Roof_2_.025",
+                    "new_thickness": 0.03,
+                    "new_conductivity": 1.5
+                }
+            ],
+            "glazing": {
+                "glazing_name": "Simple XIAN_Wenjiaoyuan_22_ExternalWindows - 1001",
+                "u": 1.5,
+                "shgc": 0.4,
+                "vt": 0.75
+            },
+            "wwrs": {
+                "North": 0.2,
+                "East": 0.3,
+                "South": 0.4,
+                "West": 0.1
+            }
+        }
+    ],
+    "other_load": [
+        {
+            "id": "other_ele_demand0",
+            "name": "第0个",
+            "flag": true,
+            "start_time": "2023-12-01",
+            "end_time": "2023-12-31",
+            "type": "power",
+            "circle_load": [
+                1000.1200,
+                8200
+            ]
+        },
+        {
+            "id": "other_ele_demand1",
+            "name": "第一个",
+            "flag": true,
+            "start_time": "2023-02-01",
+            "end_time": "2023-03-01",
+            "type": "power",
+            "circle_load": [
+                2000
+            ]
+        },
+        {
+            "id": "other_g_demand0",
+            "name": "other_g_demand0",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "heating",
+            "circle_load": [
+                1000
+            ]
+        },
+        {
+            "id": "other_g_demand1",
+            "name": "other_g_demand1",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "heating",
+            "circle_load": [
+                2000
+            ]
+        },
+        {
+            "id": "other_q_demand0",
+            "name": "other_q_demand0",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "cooling",
+            "circle_load": [
+                1000
+            ]
+        },
+        {
+            "id": "other_q_demand1",
+            "name": "other_q_demand1",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "cooling",
+            "circle_load": [
+                2000
+            ]
+        },
+        {
+            "id": "other_h_demand0",
+            "name": "other_h_demand0",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "h2",
+            "circle_load": [
+                1000
+            ]
+        },
+        {
+            "id": "other_h_demand1",
+            "name": "other_h_demand1",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "h2",
+            "circle_load": [
+                2000
+            ]
+        },
+        {
+            "id": "other_steam120_demand0",
+            "name": "other_steam120_demand0",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "steam120",
+            "circle_load": [
+                123
+            ]
+        },
+        {
+            "id": "other_steam120_demand1",
+            "name": "other_steam120_demand1",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "steam120",
+            "circle_load": [
+                100
+            ]
+        },
+        {
+            "id": "other_steam180_demand0",
+            "name": "other_steam180_demand0",
+            "flag": true,
+            "start_time": "2023-01-01",
+            "end_time": "2023-12-31",
+            "type": "steam180",
+            "circle_load": [
+                66
+            ]
+        }
+    ]
+}

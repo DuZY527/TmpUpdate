@@ -1,0 +1,35 @@
+[
+    {
+        "name": "xx公寓",
+        "type": "apartment",
+        "target_area": 2366.41,
+        "idf_file": "320.idf",
+        "epw_file": "CHN_Shaanxi.Xian.570360_CSWD.epw",
+        "heating_cycle": {"start": "10-01", "end": "05-01"},
+        "cooling_cycle": {"start": "07-01", "end": "09-30"},
+        "materials": [
+            {
+                "material_name": "XIAN_Wenjiaoyuan_22_Wall_4_.015",
+                "new_thickness": 0.02,
+                "new_conductivity": 1.5
+            },
+            {
+                "material_name": "XIAN_Wenjiaoyuan_22_Roof_2_.025",
+                "new_thickness": 0.03,
+                "new_conductivity": 1.5
+            }
+        ],
+        "glazing": {
+            "glazing_name": "Simple XIAN_Wenjiaoyuan_22_ExternalWindows - 1001",
+            "u": 1.5,
+            "shgc": 0.4,
+            "vt": 0.75
+        },
+        "wwrs": {
+            "North": 0.2,
+            "East": 0.3,
+            "South": 0.4,
+            "West": 0.1
+        }
+    }
+]
