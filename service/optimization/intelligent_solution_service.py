@@ -25,17 +25,16 @@ def crf(year):
     return crf
 
 
-def support_device(d_cost, d_se):
-    """计算配套设备价格函数
-    """
-    return d_cost * d_se
-
-
 class ISService:
     def __init__(self):
         pass
 
     def exec(self, inputBody: OptimizationBody):
+
+        param_input = inputBody.model_dump()
+        # TODO: 将输入参数转换为字典
+
+        # 开始计时
         t0 = time.time()
         #------------导入自定义数据------------#
 
@@ -56,6 +55,7 @@ class ISService:
             elif inputBody.objective_load[i].type == "hotwater":
                 hotwater_demand = inputBody.objective_load[i].load8760
 
+        g_demand += hotwater_demand  # 合并热需求
         r_solar = inputBody.device.pv.pv_data8760  # 光照强度
         wind_power = inputBody.device.wd.wd_data8760  # 风电数据
 
@@ -110,49 +110,30 @@ class ISService:
         crf_whp = crf(inputBody.device.whp.crf)
 
         # --------------单位投资成本数据--------------#
-        cost_co = inputBody.device.co.cost + support_device(inputBody.device.co.cost,
-                                                            inputBody.device.co.se)
-        cost_fc = inputBody.device.fc.cost + support_device(inputBody.device.fc.cost,
-                                                            inputBody.device.fc.se)
-        cost_el = inputBody.device.el.cost + support_device(inputBody.device.el.cost,
-                                                            inputBody.device.el.se)#???
-        cost_hst = inputBody.device.hst.cost + support_device(inputBody.device.hst.cost,
-                                                              inputBody.device.hst.se)
-        cost_ht = inputBody.device.ht.cost + support_device(inputBody.device.ht.cost,
-                                                            inputBody.device.ht.se)
-        cost_ct = inputBody.device.ct.cost + support_device(inputBody.device.ct.cost,
-                                                            inputBody.device.ct.se)
-        cost_bat = inputBody.device.bat.cost + support_device(inputBody.device.bat.cost,
-                                                              inputBody.device.bat.se)#???
-        cost_steam_storage = inputBody.device.steam_storage.cost + support_device(inputBody.device.steam_storage.cost,
-                                                                                  inputBody.device.steam_storage.se)#???
-        cost_pv = inputBody.device.pv.cost + support_device(inputBody.device.pv.cost,
-                                                            inputBody.device.pv.se)#???
-        cost_sc = inputBody.device.sc.cost + support_device(inputBody.device.sc.cost,
-                                                             inputBody.device.sc.se)#???
+        cost_co = inputBody.device.co.cost
+        cost_fc = inputBody.device.fc.cost
+        cost_el = inputBody.device.el.cost
+        cost_hst = inputBody.device.hst.cost
+        cost_ht = inputBody.device.ht.cost
+        cost_ct = inputBody.device.ct.cost
+        cost_bat = inputBody.device.bat.cost
+        cost_steam_storage = inputBody.device.steam_storage.cost
+        cost_pv = inputBody.device.pv.cost
+        cost_sc = inputBody.device.sc.cost
+
         capacity_wd = inputBody.device.wd.capacity_unit
-        cost_wd = capacity_wd * inputBody.device.wd.cost + support_device(inputBody.device.wd.cost,
-                                                                         inputBody.device.wd.se)#???
-        cost_eb = inputBody.device.eb.cost + support_device(inputBody.device.eb.cost,
-                                                            inputBody.device.eb.se)
-        cost_ac = inputBody.device.ac.cost + support_device(inputBody.device.ac.cost,
-                                                            inputBody.device.ac.se)
-        cost_hp = inputBody.device.hp.cost + support_device(inputBody.device.hp.cost,
-                                                            inputBody.device.hp.se)
-        cost_ghp = inputBody.device.ghp.cost + support_device(inputBody.device.ghp.cost,
-                                                              inputBody.device.ghp.se)
-        cost_ghp_deep = inputBody.device.ghp_deep.cost + support_device(inputBody.device.ghp_deep.cost,
-                                                                        inputBody.device.ghp_deep.se)
-        cost_gtw = inputBody.device.gtw.cost + support_device(inputBody.device.gtw.cost,
-                                                              inputBody.device.gtw.se)
-        cost_gtw2500 = inputBody.device.gtw2500.cost + support_device(inputBody.device.gtw2500.cost,
-                                                                      inputBody.device.gtw2500.se)
-        cost_hp120 = inputBody.device.hp120.cost + support_device(inputBody.device.hp120.cost,
-                                                                  inputBody.device.hp120.se)#???
-        cost_co180 = inputBody.device.co180.cost + support_device(inputBody.device.co180.cost,
-                                                                  inputBody.device.co180.se)#???
-        cost_whp = inputBody.device.whp.cost + support_device(inputBody.device.whp.cost,
-                                                              inputBody.device.whp.se) #???
+        cost_wd = capacity_wd * inputBody.device.wd.cost
+        cost_eb = inputBody.device.eb.cost
+
+        cost_ac = inputBody.device.ac.cost
+        cost_hp = inputBody.device.hp.cost
+        cost_ghp = inputBody.device.ghp.cost
+        cost_ghp_deep = inputBody.device.ghp_deep.cost
+        cost_gtw = inputBody.device.gtw.cost
+        cost_gtw2500 = inputBody.device.gtw2500.cost
+        cost_hp120 = inputBody.device.hp120.cost
+        cost_co180 = inputBody.device.co180.cost
+        cost_whp = inputBody.device.whp.cost
 
         # ---------------效率数据，包括产热、制冷、发电、热转换等--------------#
         # ----co----#
@@ -239,31 +220,30 @@ class ISService:
         # 基本设备库中设备变量
         # ----co----#
         p_co_max = m.addVar(vtype="C", lb=0,
-                            ub=inputBody.device.co.power_max * inputBody.device.co.power_already,
+                            ub=inputBody.device.co.power_max,
                             name=f"p_co_max")  # 氢气压缩机投资容量（最大功率）
         p_co = [m.addVar(vtype="C", lb=0, name=f"p_co{t}") for t in range(period)]  # 氢气压缩机工作功率
         # ----fc----#
         z_fc = [m.addVar(lb=0, ub=1, vtype="B", name=f"z_fc{t}") for t in range(period)]
-        p_fc_max = m.addVar(vtype="C", lb=0,
-                            ub= inputBody.device.fc.power_max * inputBody.device.fc.power_already,
+        p_fc_max = m.addVar(vtype="C", lb=0, ub = inputBody.device.fc.power_max,
                             name=f"p_fc_max")  # fc的投资容量（最大功率）
         g_fc = [m.addVar(vtype="C", lb=0, name=f"g_fc{t}") for t in range(period)]  # 燃料电池产热量
         p_fc = [m.addVar(vtype="C", lb=0, name=f"p_fc{t}") for t in range(period)]  # 燃料电池产电量
         h_fc = [m.addVar(vtype="C", lb=0, name=f"h_fc{t}") for t in range(period)]  # 燃料电池用氢量
         # ----el----#
         p_el_max = m.addVar(vtype="C", lb=0,
-                            ub= inputBody.device.el.nm3_max * inputBody.device.el.nm3_already,
+                            ub= inputBody.device.el.nm3_max,
                             name="p_el_max")  # el的投资容量（最大功率）
         h_el = [m.addVar(vtype="C", lb=0, name=f"h_el{t}") for t in range(period)]  # 电解槽产氢量
         p_el = [m.addVar(vtype="C", lb=0, name=f"p_el{t}") for t in range(period)]  # 电解槽功率
         # ----hst----#
         hst = m.addVar(vtype="C", lb=0,
-                       ub= inputBody.device.hst.sto_max * inputBody.device.hst.sto_already,
+                       ub= inputBody.device.hst.sto_max,
                        name=f"hst")  # 储氢罐规划容量
         h_sto = [m.addVar(vtype="C", lb=0, name=f"h_sto{t}") for t in range(period)]  # 储氢罐t时刻储氢量
         # ----ht----#
         m_ht = m.addVar(vtype="C", lb=0,
-                        ub= inputBody.device.ht.water_max * inputBody.device.ht.water_already,
+                        ub= inputBody.device.ht.water_max,
                         name=f"m_ht")  # 储热罐的规划容量
         g_ht_in = [m.addVar(vtype="C", lb=0, name=f"g_ht_in{t}") for t in range(period)]
         g_ht_out = [m.addVar(vtype="C", lb=0, name=f"g_ht_out{t}") for t in range(period)]
@@ -271,45 +251,59 @@ class ISService:
         # 写完约束之后再看看有没有需要创建的变量
         # ----ct----#
         m_ct = m.addVar(vtype="C", lb=0,
-                        ub= inputBody.device.ct.water_max * inputBody.device.ct.water_already,
+                        ub= inputBody.device.ct.water_max *,
                         name=f"m_ct")  # 储冷罐的规划容量
         q_ct_in = [m.addVar(vtype="C", lb=0, name=f"q_ct_in{t}") for t in range(period)]
         q_ct_out = [m.addVar(vtype="C", lb=0, name=f"q_ct_out{t}") for t in range(period)]  # 写完约束之后再看看有没有需要创建的变量
         q_ct = [m.addVar(vtype="C", lb=0, name=f"q_ct{t}") for t in range(period)]  # 存储的冷量
         # ----bat----#
-
+        p_bat_max = m.addvar(vtype="C", lb=0, ub= inputBody.device.bat.power_max, name=f"p_bat_max")
+        p_bat_in = [m.addVar(vtype="C", lb=0, name=f"p_bat_in{t}") for t in range(period)]
+        p_bat_out = [m.addVar(vtype="C", lb=0, name=f"p_bat_out{t}") for t in range(period)]
+        p_bat_sto = [m.addVar(vtype="C", lb=0, name=f"p_bat_sto{t}") for t in range(period)]
         # ----steam_storage----#
-
+        m_steam120_sto_max = m.addvar(vtype="C", lb=0,
+                                      ub= inputBody.device.steam_storage.steam_storage_max_per_unit,
+                                      name=f"m_steam120_sto_max")
+        m_steam180_sto_max = m.addvar(vtype="C", lb=0,
+                                      ub= inputBody.device.steam_storage.steam_storage_max_per_unit,
+                                      name=f"m_steam180_sto_max")
+        m_steam120_sto_in = [m.addVar(vtype="C", lb=0, name=f"m_steam120_sto_in{t}") for t in range(period)]
+        m_steam120_sto_out = [m.addVar(vtype="C", lb=0, name=f"m_steam120_sto_out{t}") for t in range(period)]
+        m_steam180_sto_in = [m.addVar(vtype="C", lb=0, name=f"m_steam180_sto_in{t}") for t in range(period)]
+        m_steam180_sto_out = [m.addVar(vtype="C", lb=0, name=f"m_steam120_sto_out{t}") for t in range(period)]
+        m_steam120_sto = [m.addVar(vtype="C", lb=0, name=f"m_steam120_sto{t}") for t in range(period)]
+        m_steam180_sto = [m.addVar(vtype="C", lb=0, name=f"m_steam180_sto{t}") for t in range(period)]
         # ----pv----#
         s_pv = m.addVar(vtype="C", lb=0, name=f"s_pv")  # 光伏板投资面积
         p_pv_max = m.addVar(vtype="C", lb=0, name=f"p_pv_max")  # 光伏板投资面积
-        p_pv = [m.addVar(vtype="C", lb=0, ub= inputBody.device.pv.power_max * inputBody.device.pv.power_already,
+        p_pv = [m.addVar(vtype="C", lb=0, ub= inputBody.device.pv.power_max,
                      name=f"p_pv{t}") for t in range(period)]  # 光伏板发电功率
         # ----sc----#
         s_sc = m.addVar(vtype="C", lb=0,
-                        ub=inputBody.device.sc.area_max * inputBody.device.sc.area_already,
+                        ub=inputBody.device.sc.area_max,
                         name=f"s_sc")  # 太阳能集热器投资面积
         g_sc = [m.addVar(vtype="C", lb=0, name=f"g_sc{t}") for t in range(period)]  # 太阳能集热器收集的热量
         # ----wd----#
         num_wd = m.addVar(vtype="INTEGER", lb=0,
-                          ub= inputBody.device.wd.number_max * inputBody.device.wd.number_already,
+                          ub= inputBody.device.wd.number_max,
                           name=f"num_wd")  # 风电投资数量
         p_wd = [m.addVar(vtype="C", lb=0, name=f"p_wd{t}") for t in range(period)]  # 风电发电功率
         # ----eb----#
         p_eb_max = m.addVar(vtype="C", lb=0,
-                            ub= inputBody.device.eb.power_max * inputBody.device.eb.power_already,
+                            ub= inputBody.device.eb.power_max,
                             name=f"p_eb_max")  # 电锅炉投资容量（最大功率）
         g_eb = [m.addVar(vtype="C", lb=0, name=f"g_eb{t}") for t in range(period)]  # 电锅炉产热
         p_eb = [m.addVar(vtype="C", lb=0, name=f"p_eb{t}") for t in range(period)]  # 电锅炉耗电
         # ----ac----#
         p_ac_max = m.addVar(vtype="C", lb=0,
-                            ub= inputBody.device.ac.power_max * inputBody.device.ac.power_already,
+                            ub= inputBody.device.ac.power_max,
                             name=f"p_ac_max")  # 空调投资容量（最大功率）
         p_ac = [m.addVar(vtype="C", lb=0, name=f"p_ac{t}") for t in range(period)]  # 电锅炉产热
         q_ac = [m.addVar(vtype="C", lb=0, name=f"q_ac{t}") for t in range(period)]  # 电锅炉耗电
         # ----hp----#
         p_hp_max = m.addVar(vtype="C", lb=0,
-                            ub= inputBody.device.hp.power_max * inputBody.device.hp.power_already,
+                            ub= inputBody.device.hp.power_max,
                             name=f"p_hp_max")  # 空气源热泵投资容量（最大功率）
         p_hp = [m.addVar(vtype="C", lb=0, name=f"p_hp{t}") for t in range(period)]  # 热泵产热耗电
         p_hpc = [m.addVar(vtype="C", lb=0, name=f"p_hpc{t}") for t in range(period)]  # 热泵产冷的耗电
@@ -317,7 +311,7 @@ class ISService:
         g_hp = [m.addVar(vtype="C", lb=0, name=f"g_hp{t}") for t in range(period)]  # 热泵产热
         # ----ghp----#
         p_ghp_max = m.addVar(vtype="C", lb=0,
-                             ub= inputBody.device.ghp.power_max * inputBody.device.ghp.power_already,
+                             ub= inputBody.device.ghp.power_max,
                              name=f"p_ghp_max")  # 地源热泵投资容量（最大功率）
         p_ghp = [m.addVar(vtype="C", lb=0, name=f"p_ghp{t}") for t in range(period)]  # 热泵产热耗电
         p_ghpc = [m.addVar(vtype="C", lb=0, name=f"p_ghpc{t}") for t in range(period)]  # 热泵产冷的耗电
@@ -326,34 +320,34 @@ class ISService:
         g_ghp_gr = [m.addVar(vtype="C", lb=0, name=f"g_ghp_gr{t}") for t in range(period)]  # 热泵灌热
         # ----ghp_deep----#
         p_ghp_deep_max = m.addVar(vtype="C", lb=0,
-                                  ub= inputBody.device.ghp_deep.power_max * inputBody.device.ghp_deep.power_already,
+                                  ub= inputBody.device.ghp_deep.power_max,
                                   name=f"p_ghp_deep_max")  # 地源热泵投资容量（最大功率）
         p_ghp_deep = [m.addVar(vtype="C", lb=0, name=f"p_ghp_deep{t}") for t in range(period)]  # 热泵产热耗电
         g_ghp_deep = [m.addVar(vtype="C", lb=0, name=f"g_ghp_deep{t}") for t in range(period)]  # 热泵产热
         # ----gtw----#
         num_gtw = m.addVar(vtype="INTEGER", lb=0,
-                           ub= inputBody.device.gtw.number_max * inputBody.device.gtw.number_already,
+                           ub= inputBody.device.gtw.number_max,
                            name='num_gtw')  # 地热井投资数量
         # ----gtw2500----#
         num_gtw2500 = m.addVar(vtype="INTEGER", lb=0,
-                           ub=inputBody.device.gtw2500.number_max * inputBody.device.gtw2500.number_already,
+                           ub=inputBody.device.gtw2500.number_max,
                            name='num_gtw2')  # 2500深度地热井投资数量
         # ----hp120----#
         p_hp120_max = m.addVar(vtype="C", lb=0,
-                               ub=inputBody.device.hp120.power_max * inputBody.device.hp120.power_already,
+                               ub=inputBody.device.hp120.power_max,
                                name=f"p_hp120_max")  # 余热热泵投资容量（最大功率）
         p_hp120 = [m.addVar(vtype="C", lb=0, name=f"p_hp120{t}") for t in range(period)]  # 高温热泵耗电量
         m_hp120 = [m.addVar(vtype="C", lb=0, name=f"m_hp120{t}") for t in range(period)]
         g_hp120 = [m.addVar(vtype="C", lb=0, name=f"g_hp120{t}") for t in range(period)]
         # ----co180----#
         p_co180_max = m.addVar(vtype="C", lb=0,
-                               ub=inputBody.device.co180.power_max * inputBody.device.co180.power_already,
+                               ub=inputBody.device.co180.power_max,
                                name=f"p_co180_max")  # 余热热泵投资容量（最大功率）
         p_co180 = [m.addVar(vtype="C", lb=0, name=f"p_co180{t}") for t in range(period)]  # 高温压缩机耗电量
         m_co180 = [m.addVar(vtype="C", lb=0, name=f"m_co180{t}") for t in range(period)]
         # ----whp----#
         p_whp_max = m.addVar(vtype="C", lb=0,
-                             ub=inputBody.device.whp.power_max * inputBody.device.whp.power_already,
+                             ub=inputBody.device.whp.power_max,
                              name=f"p_whp_max")  # 余热热泵投资容量（最大功率）
         p_whp = [m.addVar(vtype="C", lb=0, name=f"p_whp{t}") for t in range(period)]  # 余热热泵功率
         p_whpg = [m.addVar(vtype="C", lb=0, name=f"p_whpg{t}") for t in range(period)]  # 余热热泵产热耗电量
@@ -371,68 +365,72 @@ class ISService:
 
         # 基本设备库中设备的规划容量上下限，与if_use相关联，判断前端是否勾选了该设备：1，勾选使用；0，未勾选使用
         # ----co----#
-        m.addCons(p_co_max <= inputBody.device.co.power_max * inputBody.device.co.power_already)
-        m.addCons(p_co_max >= inputBody.device.co.power_min * inputBody.device.co.power_already)
+        m.addCons(p_co_max <= inputBody.device.co.power_max)
+        m.addCons(p_co_max >= inputBody.device.co.power_min)
         #----fc----#
-        m.addCons(p_fc_max <= inputBody.device.fc.power_max * inputBody.device.fc.power_already)
-        m.addCons(p_fc_max >= inputBody.device.fc.power_min * inputBody.device.fc.power_already)
+        m.addCons(p_fc_max <= inputBody.device.fc.power_max)
+        m.addCons(p_fc_max >= inputBody.device.fc.power_min)
         #----el----#
-        m.addCons(p_el_max <= inputBody.device.el.power_max * inputBody.device.el.nm3_already)
-        m.addCons(p_el_max <= 50 * inputBody.device.el.nm3_max * inputBody.device.el.nm3_already / 11.2)
-        m.addCons(p_el_max >= 50 * inputBody.device.el.nm3_min * inputBody.device.el.nm3_already / 11.2)
-        m.addCons(p_el_max >= inputBody.device.el.nm3_min * inputBody.device.el.nm3_already)
+        m.addCons(p_el_max <= inputBody.device.el.power_max)
+        m.addCons(p_el_max <= 50 * inputBody.device.el.nm3_max / 11.2)
+        m.addCons(p_el_max >= 50 * inputBody.device.el.nm3_min / 11.2)
+        m.addCons(p_el_max >= inputBody.device.el.nm3_min)
         #----hst----#
-        m.addCons(hst <= inputBody.device.hst.sto_max * inputBody.device.hst.sto_already)
-        m.addCons(hst >= inputBody.device.hst.sto_min * inputBody.device.hst.sto_already)
+        m.addCons(hst <= inputBody.device.hst.sto_max)
+        m.addCons(hst >= inputBody.device.hst.sto_min)
         #----ht----#
-        m.addCons(m_ht <= inputBody.device.ht.water_max * inputBody.device.ht.water_already)
-        m.addCons(m_ht >= inputBody.device.ht.water_min * inputBody.device.ht.water_already)
+        m.addCons(m_ht <= inputBody.device.ht.water_max)
+        m.addCons(m_ht >= inputBody.device.ht.water_min)
         #----ct----#
-        m.addCons(m_ct <= inputBody.device.ct.water_max * inputBody.device.ct.water_already)
-        m.addCons(m_ct >= inputBody.device.ct.water_min * inputBody.device.ct.water_already)
+        m.addCons(m_ct <= inputBody.device.ct.water_max)
+        m.addCons(m_ct >= inputBody.device.ct.water_min)
         # ----bat----#
-
+        m.addCons(p_bat_max <= inputBody.device.bat.power_max)
+        m.addCons(p_bat_max >= inputBody.device.bat.power_min)
         # ----steam_storage----#
-
+        m.addCons(m_steam120_sto_max <= inputBody.device.steam_storage.steam_storage_max_per_unit)
+        m.addCons(m_steam120_sto_max >= inputBody.device.steam_storage.steam_storage_min_per_unit)
+        m.addCons(m_steam180_sto_max <= inputBody.device.steam_storage.steam_storage_max_per_unit)
+        m.addCons(m_steam180_sto_max >= inputBody.device.steam_storage.steam_storage_min_per_unit)
         #----pv----#
-        m.addCons(p_pv_max <= inputBody.device.pv.power_max * inputBody.device.pv.power_already)
-        m.addCons(p_pv_max >= inputBody.device.pv.power_min * inputBody.device.pv.power_already)
+        m.addCons(p_pv_max <= inputBody.device.pv.power_max)
+        m.addCons(p_pv_max >= inputBody.device.pv.power_min)
         # ----sc----#
-        m.addCons(s_sc <= inputBody.device.sc.area_max * inputBody.device.sc.area_already)
-        m.addCons(s_sc >= inputBody.device.sc.area_min * inputBody.device.sc.area_already)
+        m.addCons(s_sc <= inputBody.device.sc.area_max)
+        m.addCons(s_sc >= inputBody.device.sc.area_min)
         # ----wd----#
-        m.addCons(num_wd <= inputBody.device.wd.number_max * inputBody.device.wd.number_already)
-        m.addCons(num_wd >= inputBody.device.wd.number_min * inputBody.device.wd.number_already)
+        m.addCons(num_wd <= inputBody.device.wd.number_max)
+        m.addCons(num_wd >= inputBody.device.wd.number_min)
         #----eb----#
-        m.addCons(p_eb_max <= inputBody.device.eb.power_max * inputBody.device.eb.power_already)
-        m.addCons(p_eb_max >= inputBody.device.eb.power_min * inputBody.device.eb.power_already)
+        m.addCons(p_eb_max <= inputBody.device.eb.power_max)
+        m.addCons(p_eb_max >= inputBody.device.eb.power_min)
         #----ac----#
-        m.addCons(p_ac_max <= inputBody.device.ac.power_max * inputBody.device.ac.power_already)
-        m.addCons(p_ac_max >= inputBody.device.ac.power_min * inputBody.device.ac.power_already)
+        m.addCons(p_ac_max <= inputBody.device.ac.power_max)
+        m.addCons(p_ac_max >= inputBody.device.ac.power_min)
         #----hp----#
-        m.addCons(p_hp_max <= inputBody.device.hp.power_max * inputBody.device.hp.power_already)
-        m.addCons(p_hp_max >= inputBody.device.hp.power_min * inputBody.device.hp.power_already)
+        m.addCons(p_hp_max <= inputBody.device.hp.power_max)
+        m.addCons(p_hp_max >= inputBody.device.hp.power_min)
         #----ghp----#
-        m.addCons(p_ghp_max <= inputBody.device.ghp.power_max * inputBody.device.ghp.power_already)
-        m.addCons(p_ghp_max >= inputBody.device.ghp.power_min * inputBody.device.ghp.power_already)
+        m.addCons(p_ghp_max <= inputBody.device.ghp.power_max)
+        m.addCons(p_ghp_max >= inputBody.device.ghp.power_min)
         # ----ghp_deep----#
-        m.addCons(p_ghp_deep_max <= inputBody.device.ghp_deep.power_max * inputBody.device.ghp_deep.power_already)
-        m.addCons(p_ghp_deep_max >= inputBody.device.ghp_deep.power_min * inputBody.device.ghp_deep.power_already)
+        m.addCons(p_ghp_deep_max <= inputBody.device.ghp_deep.power_max)
+        m.addCons(p_ghp_deep_max >= inputBody.device.ghp_deep.power_min)
         #----gtw----#
-        m.addCons(num_gtw <= inputBody.device.gtw.number_max * inputBody.device.gtw.number_already)
-        m.addCons(num_gtw >= inputBody.device.gtw.number_min * inputBody.device.gtw.number_already)
+        m.addCons(num_gtw <= inputBody.device.gtw.number_max)
+        m.addCons(num_gtw >= inputBody.device.gtw.number_min)
         # ----gtw2500----#
-        m.addCons(num_gtw2500 <= inputBody.device.gtw2500.number_max * inputBody.device.gtw2500.number_already)
-        m.addCons(num_gtw2500 >= inputBody.device.gtw2500.number_min * inputBody.device.gtw2500.number_already)
+        m.addCons(num_gtw2500 <= inputBody.device.gtw2500.number_max)
+        m.addCons(num_gtw2500 >= inputBody.device.gtw2500.number_min)
         # ----hp120----#
-        m.addCons(p_hp120_max <= inputBody.device.hp120.power_max * inputBody.device.hp120.power_already)
-        m.addCons(p_hp120_max >= inputBody.device.hp120.power_min * inputBody.device.hp120.power_already)
+        m.addCons(p_hp120_max <= inputBody.device.hp120.power_max)
+        m.addCons(p_hp120_max >= inputBody.device.hp120.power_min)
         # ----co180----#
-        m.addCons(p_co180_max <= inputBody.device.co180.power_max * inputBody.device.co180.power_already)
-        m.addCons(p_co180_max >= inputBody.device.co180.power_max * inputBody.device.co180.power_already)
+        m.addCons(p_co180_max <= inputBody.device.co180.power_max)
+        m.addCons(p_co180_max >= inputBody.device.co180.power_max)
         #----whp----#
-        m.addCons(p_whp_max <= inputBody.device.whp.power_max * inputBody.device.whp.power_already)
-        m.addCons(p_whp_max >= inputBody.device.whp.power_min * inputBody.device.whp.power_already)
+        m.addCons(p_whp_max <= inputBody.device.whp.power_max)
+        m.addCons(p_whp_max >= inputBody.device.whp.power_min)
 
         # 用户自定义设备的规划容量上下限
         for i in range(custom_device_num):
@@ -479,21 +477,21 @@ class ISService:
             # 电总线约束
             m.addCons(
                 p_whp[i] + p_co180[i] + p_hp120[i] + p_el[i] + p_sol[i] + p_hp[i] + p_hpc[i] + p_ghp[i] + p_ghp_deep[i] +
-                p_ghpc[i] + p_eb[i] + p_ac[i] + p_co[i] + ele_load[i]
+                p_ghpc[i] + p_eb[i] + p_ac[i] + p_co[i] + ele_load[i] + p_bat_in[i]
                 + (quicksum([x_j_in[0][device_index][i] for device_index in range(custom_device_num)]))
                 + (quicksum(
                     [s_i_ele_in[storage_device_index][i] for storage_device_index in range(custom_storge_device_num[0])]))
-                == p_hyd[i] + p_pur[i] + p_fc[i] + p_pv[i] + p_wd[i]
+                == p_pur[i] + p_fc[i] + p_pv[i] + p_wd[i] + p_bat_out[i]
                 + (quicksum([x_j_out[0][device_index][i] for device_index in range(custom_device_num)]))
                 + (quicksum(
                     [s_i_ele_out[storage_device_index][i] for storage_device_index in range(custom_storge_device_num[0])])))
             # 热总线约束
-            m.addCons(g_tubeTosteam120[i] + g_tube[i]
+            m.addCons(g_tubeTosteam120[i] + g_tube[i] + g_ht_in[i] + g_ghp_gr[i]
                     + (quicksum([x_j_in[1][device_index][i] for device_index in range(custom_device_num)]))
                     + (quicksum(
                 [s_i_hot_in[storage_device_index][i] for storage_device_index in range(custom_storge_device_num[1])]))
-                    == g_fc[i] + g_whp[i] + g_ghp_deep[i] + g_eb[i] + g_sc[i] - g_ghp_gr[i] - g_ht_in[i] + g_ht_out[i] -
-                    g_xb[i] + g_hp[i] + g_ghp[i]
+                    == g_fc[i] + g_whp[i] + g_ghp_deep[i] + g_eb[i] + g_sc[i] + g_ht_out[i]
+                    + g_hp[i] + g_ghp[i]
                     + (quicksum([x_j_out[1][device_index][i] for device_index in range(custom_device_num)]))
                     + (quicksum(
                 [s_i_hot_out[storage_device_index][i] for storage_device_index in range(custom_storge_device_num[1])])))
@@ -517,21 +515,10 @@ class ISService:
                 [s_i_gas_out[storage_device_index][i] for storage_device_index in range(custom_storge_device_num[4])])))
 
             # 高温120度蒸气约束
-            m.addCons(steam120_demand[i] == m_hp120[i] + steam120_pur[i] - steam120_sol[i] - m_steam120Tosteam180[i])
-
-            # 高温120度热泵hp120约束
-            m.addCons(750 * m_hp120[i] == g_hp120[i])
-            m.addCons(cop_hp120 * p_hp120[i] == g_hp120[i])
-            m.addCons((cop_hp120 - 1) * g_tubeTosteam120[i] + p_hp120[i] == g_hp120[i])
-            m.addCons(p_hp120[i] <= p_hp120_max)
+            m.addCons(steam120_demand[i] + steam120_sol[i] + m_steam120Tosteam180[i] + m_steam120_sto_in[i] == m_hp120[i] + steam120_pur[i] + m_steam120_sto_out[i])
 
             # 高温180度蒸气约束
-            m.addCons(steam180_demand[i] == m_steam120Tosteam180[i] + steam180_pur[i] - steam180_sol[i])
-
-            # co180约束
-            m.addCons(200 * m_steam120Tosteam180[i] == p_co180[i])
-            m.addCons(m_hp120[i] >= m_steam120Tosteam180[i])
-            m.addCons(p_co180[i] <= p_co180_max)
+            m.addCons(steam180_demand[i] + steam180_sol[i] + m_steam180_sto_in[i] == m_steam120Tosteam180[i] + steam180_pur[i] + m_steam180_sto_out[i])
 
             # 其他能量流的系统约束
             for j in range(custom_energy_num):
@@ -564,7 +551,7 @@ class ISService:
         # 初始状态和末状态平衡
 
         #-----------------------------设备约束-----------------------------#
-        if crf(inputBody.device.ghp.balance_flag) == 1:  #如果需要考虑全年热平衡
+        if inputBody.device.ghp.balance_flag == 1:  #如果需要考虑全年热平衡
             m.addCons(quicksum([g_ghp[i] - p_ghp[i] - q_ghp[i] - p_ghpc[i] - g_ghp_gr[i] for i in range(period)]) == 0)
         for i in range(period):
             # 买能约束      g_sol和gas_pur的未定义以及对120度蒸汽和180度蒸汽的定义未区分
@@ -611,8 +598,18 @@ class ISService:
             m.addCons(q_ct[i] - q_ct[i + 1] == q_ct_in[i] - q_ct_out[i] + 0.001 * q_ct[i])  # 储冷罐存储动态变化
         m.addCons(q_ct[-1] - q_ct[0] == q_ct_in[-1] - q_ct_out[-1] + 0.001 * q_ct[-1])
         # ----bat----#
-
+        for i in range(period):
+            m.addCons(p_bat_sto[i] <= p_bat_max)  # 电池上限
+            m.addCons(q_ct[i] >= inputBody.device.bat.power_min)  # 电池下限
+        for i in range(period - 1):
+            m.addCons(p_bat_sto[i+1] - p_bat_sto[i] == p_bat_in[i] - q_ct_out[i] + 0.001 * p_bat_sto[i])  # 电池存储动态变化
+        m.addCons(p_bat_sto[0] - p_bat_sto[-1] == p_bat_in[-1] - q_ct_out[-1] + 0.001 * p_bat_sto[-1])
         # ----steam_storage----#
+        for i in range(period):
+            m.addCons(m_steam120_sto[i+1] - m_steam120_sto[i] == m_steam120_sto_in[i] - m_steam120_sto_out[i])
+            m.addCons(m_steam180_sto[i+1] - m_steam180_sto[i] == m_steam180_sto_in[i] - m_steam180_sto_out[i])
+        m.addCons(m_steam120_sto[0] - m_steam120_sto[-1] == m_steam120_sto_in[-1] - m_steam120_sto_out[-1])
+        m.addCons(m_steam180_sto[0] - m_steam180_sto[-1] == m_steam180_sto_in[-1] - m_steam180_sto_out[-1])
 
         for i in range(period):
         # ---pv----#
@@ -644,9 +641,14 @@ class ISService:
             m.addCons(num_gtw * p_gtw >= q_ghp[i] + p_ghpc[i])  #井和热泵有关联，制冷量+电功率=灌热量
             m.addCons(num_gtw2500 * p_gtw2500 >= g_ghp_deep[i] - p_ghp_deep[i]) # 存疑
         # ---hp120----#
-
+            m.addCons(750 * m_hp120[i] == g_hp120[i])
+            m.addCons(cop_hp120 * p_hp120[i] == g_hp120[i])
+            m.addCons((cop_hp120 - 1) * g_tubeTosteam120[i] + p_hp120[i] == g_hp120[i])
+            m.addCons(p_hp120[i] <= p_hp120_max)
         # ---co180----#
-
+            m.addCons(200 * m_steam120Tosteam180[i] == p_co180[i])
+            m.addCons(m_hp120[i] >= m_steam120Tosteam180[i])
+            m.addCons(p_co180[i] <= p_co180_max)
         # ---whp----#               找不到heat_resourceg和heat_resourceq的对应
             m.addCons(p_whpg[i] * k_whp == g_whp[i])
             m.addCons(g_whp[i] - p_whpg[i] <= input_json['device']['whp']['heat_resourceg'])
@@ -744,8 +746,8 @@ class ISService:
                     sum(ele_load) + sum(g_demand) / k_eb + sum(q_demand) / k_ghp_q))  # 碳减排约束，买电量不能超过碳排放,即1-碳减排
         m.addCons(ce_h == quicksum(p_pur) * alpha_e)
         #-----------------------------规划设备花费约束-----------------------------#
-        m.addCons(capex_sum == (+ p_pv_max * cost_pv + s_sc * cost_sc + num_wd * cost_wd
-                                + p_hp120_max * cost_hp120 + p_co180_max * cost_co180
+        m.addCons(capex_sum == (p_pv_max * cost_pv + s_sc * cost_sc + num_wd * cost_wd
+                                + p_hp120_max * cost_hp120 + p_co180_max * cost_co180 + cost_bat * p_bat_max + cost_steam_storage * (m_steam120_sto_max + m_steam180_sto_max)
                                 + p_ghp_max * cost_ghp + p_ghp_deep_max * cost_ghp_deep + cost_gtw * num_gtw + cost_gtw2500 * num_gtw2500
                                 + cost_ht * m_ht + cost_ct * m_ct + cost_hst * hst + cost_eb * p_eb_max + cost_ac * p_ac_max + cost_hp * p_hp_max + cost_fc * p_fc_max + cost_el * p_el_max + cost_co * p_co_max + p_whp_max * cost_whp) * (1 + input_json["price"]["PSE"])  # 基本设备库设备的规划成本
                 + quicksum([cost_x[i] * x_plan[i] for i in range(custom_device_num)]) * (
@@ -768,7 +770,7 @@ class ISService:
         m.addCons(capex_sum <= input_json['price']['capex_max'][1 - isloate[0]])  # 总规划成本上限（在允许买电和不允许买电模式下的运行费用上限不同）
 
         m.addCons(capex_crf == crf_pv * p_pv_max * cost_pv + crf_wd * num_wd * cost_wd + crf_sc * s_sc * cost_sc + crf_hst * hst * cost_hst + crf_ht * cost_ht * (
-                    m_ht) + crf_ct * cost_ct * (m_ct) + crf_hp * cost_hp * p_hp_max
+                    m_ht) + crf_ct * cost_ct * (m_ct) + crf_hp * cost_hp * p_hp_max + crf_bat * cost_bat * p_bat_max + crf_steam_storage * cost_steam_storage * (m_steam120_sto_max + m_steam180_sto_max)
                 + crf_gtw * cost_gtw * num_gtw + crf_gtw2500 * cost_gtw2500 * num_gtw2500
                 + crf_hp120 * p_hp120_max * cost_hp120 + crf_co180 * p_co180_max * cost_co180 + crf_ghp * cost_ghp * p_ghp_max + crf_ghp_deep * cost_ghp_deep * p_ghp_deep_max + crf_eb * cost_eb * p_eb_max + crf_ac * cost_ac * p_ac_max + crf_fc * p_fc_max * cost_fc + crf_el * p_el_max * cost_el + crf_co * p_co_max * cost_co + crf_xb * cost_xb * g_xb_max + crf_whp * p_whp_max * cost_whp
                 + quicksum([cost_x[i] * x_plan[i] for i in range(custom_device_num)]) * (
