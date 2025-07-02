@@ -863,7 +863,7 @@ class ISService:
 
         ce_base = load2ele_sum * alpha_e + load2gas_sum * alpha_gas + load2h_sum * alpha_h + load2co_heat + load2co_steam
         if param_input["base"]["cer_enable"] is True:
-            cerr = param_input["base"]["cer"]  # 碳减排率
+            cerr = param_input["base"]["cer"] / 100  # 碳减排率
             m.addCons(ce_h <= (1 - cerr) * ce_base)
         m.addCons(ce_h == quicksum(p_pur) * alpha_e)
         #-----------------------------规划设备花费约束-----------------------------#
@@ -957,7 +957,7 @@ class ISService:
 
         # TODO: (前端) 确认返回值
         if param_input["income"]["power_type"] == "买电电价折扣":
-            lambda_ele_revenue = [price * param_input["income"]["power_price"] for price in lambda_ele_in]
+            lambda_ele_revenue = [price * param_input["income"]["power_price"] / 100 for price in lambda_ele_in]
         elif param_input["income"]["power_type"] == "固定价格":
             lambda_ele_revenue = [param_input["income"]["power_price"]] * period
         else:
@@ -967,7 +967,7 @@ class ISService:
             if param_input["income"]["heat_type"] == "供暖面积":
                 revenue_heat = param_input["income"]["heat_price"] * param_input["objective_load"]["g_load_area"]
             elif param_input["income"]["heat_type"] == "热量":
-                revenue_heat = param_input["income"]["heat_price"] * sum(g_demand)
+                revenue_heat = param_input["income"]["heat_price"] * sum(np.multiply(g_demand, (3600 / 1e6)).tolist())
             else:
                 raise ValueError("非法 heat_type 值！")
         # TODO: (ZYL) 确认该电价是不是使用 lambda_ele_revenue
@@ -983,7 +983,7 @@ class ISService:
             if param_input["income"]["cool_type"] == "供冷面积":
                 revenue_cool = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
             elif param_input["income"]["cool_type"] == "冷量":
-                revenue_cool = param_input["income"]["cool_price"] * sum(q_demand)
+                revenue_cool = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
             else:
                 raise ValueError("非法 cool_type 值！")
         elif param_input["base"]["base_method_cooling"] == "水冷机组":
@@ -1025,22 +1025,39 @@ class ISService:
         # ---------------------------对比方案: 纯电 (电锅炉供暖) 方案-----------------------------#
         capex_ele_eb = 0
         capex_g_eb = max(g_demand) / k_eb * cost_eb
+        opex_cool_eb = 0
+        capex_q_eb = 0
         # TODO: (DZY, ZYL) 确认对比方案供冷方式，先使用水冷机组供冷 + 集中供冷
-        capex_q_eb = max(q_demand) / k_ac * cost_ac
+        if param_input["base"]["base_method_cooling"] == "集中供冷":
+            if param_input["income"]["cool_type"] == "供冷面积":
+                opex_cool_eb = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
+            elif param_input["income"]["cool_type"] == "冷量":
+                opex_cool_eb = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+            else:
+                raise ValueError("非法 cool_type 值！")
+        elif param_input["base"]["base_method_cooling"] == "水冷机组":
+            capex_q_eb = max(q_demand) / k_ac * cost_ac
+        else:
+            raise ValueError("非法 base_method_cooling 值！")
         capex_steam120_eb = max(steam120_demand) * 750 / k_eb * cost_eb
         capex_steam180_eb = max(steam180_demand) * 770 / k_eb * cost_eb
         capex_hotwater_eb = max(hotwater_demand) / k_eb * cost_eb
         capex_all_eb = ((capex_ele_eb + capex_g_eb + capex_q_eb
                          + capex_steam120_eb + capex_steam180_eb + capex_hotwater_eb)
                         * (1 + param_input["base"]["other_investment"]))
-        # TODO: (DZY, ZYL) 确认年化投资成本如何计算，即电锅炉使用年限是按输入来
-        capex_all_crf_eb = crf(10) * capex_all_eb + capex_all_eb * param_input["base"]["other_investment"] / 10
+
+        if param_input["device"]["eb"]["power_already"] == 0 and param_input["device"]["eb"]["power_maxy"] == 0 :
+            capex_all_crf_eb = crf_eb * capex_all_eb + capex_all_eb * param_input["base"]["other_investment"] / 10
+        else:
+            capex_all_crf_eb = crf(10) * capex_all_eb + capex_all_eb * param_input["base"]["other_investment"] / 10
         p_pur_eb = [(ele_load[i] + g_demand[i] / k_eb + q_demand[i] / k_ac
                      + steam120_demand[i] * 750 / k_eb + steam180_demand[i] * 770 / k_eb
                      + hotwater_demand[i] / k_eb) for i in range(period)]
         opex_sum_eb = (sum(lambda_ele_in[i] * p_pur_eb[i] for i in range(period))
                        + lambda_ele_capacity * max(p_pur_eb) * 12
-                       + sum(lambda_h_in * h_demand[i] for i in range(period)))
+                       + sum(lambda_h_in * h_demand[i] for i in range(period))
+                       + opex_cool_eb)
+
         cost_annual_eb = capex_all_crf_eb + opex_sum_eb
 
         whole_energy_contrast = (sum(ele_load)
@@ -1072,7 +1089,10 @@ class ISService:
                          + capex_steam120_hp + capex_steam180_hp + capex_hotwater_hp)
                         * (1 + param_input["base"]["other_investment"]))
         # RE: 确认年化投资成本如何计算，即热泵使用年限是按输入来
-        capex_all_crf_hp = crf(15) * capex_all_hp + capex_all_hp * param_input["base"]["other_investment"] / 15
+        if param_input["device"]["hp"]["power_already"] == 0 and param_input["device"]["hp"]["power_maxy"] == 0:
+            capex_all_crf_hp = crf_hp * capex_all_hp + capex_all_hp * param_input["base"]["other_investment"] / 10
+        else:
+            capex_all_crf_hp = crf(15) * capex_all_hp + capex_all_hp * param_input["base"]["other_investment"] / 10
         p_pur_hp = [(ele_load[i] + g_demand[i] / k_hp_g + q_demand[i] / k_hp_q
                     + steam120_demand[i] * 750 / k_hp_g + steam180_demand[i] * 770 / k_hp_g
                     + hotwater_demand[i] / k_hp_g) for i in range(period)]
@@ -1096,8 +1116,21 @@ class ISService:
         # RE: 确认过去计算方式中的 0.3525 是元/kwh 效率*元/方*方/kWh
         capex_ele_gas = 0
         capex_g_gas = max(g_demand) / k_gas * cost_gas
+        opex_cool_gas = 0
+        capex_q_gas = 0
         # RE: 确认对比方案供冷方式，先使用水冷机组供冷+集中供冷
-        capex_q_gas = max(q_demand) / k_ac * cost_ac
+        if param_input["base"]["base_method_cooling"] == "集中供冷":
+            if param_input["income"]["cool_type"] == "供冷面积":
+                opex_cool_gas = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
+            elif param_input["income"]["cool_type"] == "冷量":
+                opex_cool_gas = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+            else:
+                raise ValueError("非法 cool_type 值！")
+        elif param_input["base"]["base_method_cooling"] == "水冷机组":
+            capex_q_gas = max(q_demand) / k_ac * cost_ac
+        else:
+            raise ValueError("非法 base_method_cooling 值！")
+
         capex_steam120_gas = max(steam120_demand) * 750 / k_gas * cost_gas
         capex_steam180_gas = max(steam180_demand) * 770 / k_gas * cost_gas
         capex_hotwater_gas = max(hotwater_demand) / k_gas * cost_gas
@@ -1112,7 +1145,8 @@ class ISService:
         opex_sum_gas = (sum(lambda_ele_in[i] * p_pur_gas[i] for i in range(period))
                         + lambda_ele_capacity * max(p_pur_gas) * 12
                         + sum(gas_price * gas_pur_gas[i] for i in range(period))
-                        + sum(lambda_h_in * h_demand[i] for i in range(period)))
+                        + sum(lambda_h_in * h_demand[i] for i in range(period))
+                        +opex_cool_gas)
         cost_annual_gas = capex_all_crf_gas + opex_sum_gas
         cost_annual_per_energy_gas = cost_annual_gas / whole_energy_contrast
         revenue_gas = revenue
