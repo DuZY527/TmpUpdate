@@ -1047,9 +1047,9 @@ class ISService:
                         * (1 + param_input["base"]["other_investment"]))
 
         if param_input["device"]["eb"]["power_already"] == 0 and param_input["device"]["eb"]["power_max"] == 0 :
-            capex_all_crf_eb = crf_eb * capex_all_eb + capex_all_eb * param_input["base"]["other_investment"] / 10
-        else:
             capex_all_crf_eb = crf(10) * capex_all_eb + capex_all_eb * param_input["base"]["other_investment"] / 10
+        else:
+            capex_all_crf_eb = crf_eb * capex_all_eb + capex_all_eb * param_input["base"]["other_investment"] / 10
         p_pur_eb = [(ele_load[i] + g_demand[i] / k_eb + q_demand[i] / k_ac
                      + steam120_demand[i] * 750 / k_eb + steam180_demand[i] * 770 / k_eb
                      + hotwater_demand[i] / k_eb) for i in range(period)]
@@ -1090,9 +1090,9 @@ class ISService:
                         * (1 + param_input["base"]["other_investment"]))
         # RE: 确认年化投资成本如何计算，即热泵使用年限是按输入来
         if param_input["device"]["hp"]["power_already"] == 0 and param_input["device"]["hp"]["power_max"] == 0:
-            capex_all_crf_hp = crf_hp * capex_all_hp + capex_all_hp * param_input["base"]["other_investment"] / 10
-        else:
             capex_all_crf_hp = crf(15) * capex_all_hp + capex_all_hp * param_input["base"]["other_investment"] / 10
+        else:
+            capex_all_crf_hp = crf_hp * capex_all_hp + capex_all_hp * param_input["base"]["other_investment"] / 10
         p_pur_hp = [(ele_load[i] + g_demand[i] / k_hp_g + q_demand[i] / k_hp_q
                     + steam120_demand[i] * 750 / k_hp_g + steam180_demand[i] * 770 / k_hp_g
                     + hotwater_demand[i] / k_hp_g) for i in range(period)]
