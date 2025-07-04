@@ -120,8 +120,8 @@ class ISService:
                 steam180_demand = np.add(steam180_demand, param_input["objective_load"]["steam_demand"][i]["load"]).tolist()
         for i in range(hotwater_num):
             hotwater_demand = np.add(hotwater_demand, param_input["objective_load"]["hotwater"][i]["load"]).tolist()
-        g_demand = np.multiply(g_demand, (1e6 / 3600)).tolist()  # GJ/h -> kW
-        q_demand = np.multiply(q_demand, (1e6 / 3600)).tolist()  # GJ/h -> kW
+        # g_demand = np.multiply(g_demand, (1e6 / 3600)).tolist()  # GJ/h -> kW
+        # q_demand = np.multiply(q_demand, (1e6 / 3600)).tolist()  # GJ/h -> kW
 
         # RE: 光伏出力单位 kW/1kW
         pv_data = param_input["device"]["pv"]["pv_data8760"]
@@ -180,6 +180,29 @@ class ISService:
             ghp: 浅层地源热泵, ghp_deep: 中深层地源热泵, gtw: 浅层地埋井, gtw2500: 中深层地热井,
             hp120:高温热泵, co180:高温蒸汽压缩机, whp: 余热热泵
         """
+        ##---设备使用使能-----##
+        en_co = param_input["device"]["co"]["used"]
+        en_fc = param_input["device"]["fc"]["used"]
+        en_el = param_input["device"]["el"]["used"]
+        en_hst = param_input["device"]["hst"]["used"]
+        en_ht = param_input["device"]["ht"]["used"]
+        en_ct = param_input["device"]["ct"]["used"]
+        en_bat = param_input["device"]["bat"]["used"]
+        en_steam_storage = param_input["device"]["steam_storage"]["used"]
+        en_pv = param_input["device"]["pv"]["used"]
+        en_sc = param_input["device"]["sc"]["used"]
+        en_wd = param_input["device"]["wd"]["used"]
+        en_eb = param_input["device"]["eb"]["used"]
+        en_abc = param_input["device"]["abc"]["used"]
+        en_ac = param_input["device"]["ac"]["used"]
+        en_hp = param_input["device"]["hp"]["used"]
+        en_ghp = param_input["device"]["ghp"]["used"]
+        en_ghp_deep = param_input["device"]["ghp_deep"]["used"]
+        en_gtw = param_input["device"]["gtw"]["used"]
+        en_gtw2500 = param_input["device"]["gtw2500"]["used"]
+        en_hp120 = param_input["device"]["hp120"]["used"]
+        en_co180 = param_input["device"]["co180"]["used"]
+        en_whp = param_input["device"]["whp"]["used"]
         #---------------年化收益率数据--------------#
         crf_co = crf(param_input["device"]["co"]["crf"])
         crf_fc = crf(param_input["device"]["fc"]["crf"])
@@ -366,7 +389,7 @@ class ISService:
             "燃气锅炉": k_gas,  # 天然气 (m3) -> 热 (kWh)
         }
         eta_q_base_dict = {
-            "水冷机组": k_ac,  # 电 (kWh) -> 冷 (kWh)
+            "冷水机组": k_ac,  # 电 (kWh) -> 冷 (kWh)
         }
         eta_steam120_base_dict = {
             "电锅炉": k_eb / 750,  # 电 (kWh) -> 120蒸汽 (t)
@@ -411,96 +434,99 @@ class ISService:
         hotwater_sol = [m.addVar(vtype="C", lb=0, name=f"hotwater_sol{t}") for t in range(period)]  # 卖热水
         # 基本设备库中设备变量
         # ----co----#
-        p_co_max = m.addVar(vtype="C", lb=param_input["device"]["co"]["power_min"],
-                            ub=param_input["device"]["co"]["power_max"],
+        p_co_max = m.addVar(vtype="C", lb=param_input["device"]["co"]["power_min"]*en_co,
+                            ub=param_input["device"]["co"]["power_max"]*en_co,
                             name=f"p_co_max")  # 氢气压缩机投资容量（最大功率）
         p_co = [m.addVar(vtype="C", lb=0, name=f"p_co{t}") for t in range(period)]  # 氢气压缩机工作功率
         # ----fc----#
-        p_fc_max = m.addVar(vtype="C", lb=param_input["device"]["fc"]["power_min"], ub=param_input["device"]["fc"]["power_max"],
+        p_fc_max = m.addVar(vtype="C", lb=param_input["device"]["fc"]["power_min"]*en_fc,
+                            ub=param_input["device"]["fc"]["power_max"]*en_fc,
                             name=f"p_fc_max")  # fc的投资容量（最大功率）
         g_fc = [m.addVar(vtype="C", lb=0, name=f"g_fc{t}") for t in range(period)]  # 燃料电池产热量
         p_fc = [m.addVar(vtype="C", lb=0, name=f"p_fc{t}") for t in range(period)]  # 燃料电池产电量
         h_fc = [m.addVar(vtype="C", lb=0, name=f"h_fc{t}") for t in range(period)]  # 燃料电池用氢量
         # ----el----#
-        p_el_max = m.addVar(vtype="C", lb=p_el_lower, ub=p_el_upper, name="p_el_max")  # el的投资容量（最大功率）
+        p_el_max = m.addVar(vtype="C", lb=p_el_lower*en_el, ub=p_el_upper*en_el, name="p_el_max")  # el的投资容量（最大功率）
         h_el = [m.addVar(vtype="C", lb=0, name=f"h_el{t}") for t in range(period)]  # 电解槽产氢量
         p_el = [m.addVar(vtype="C", lb=0, name=f"p_el{t}") for t in range(period)]  # 电解槽功率
         g_el = [m.addVar(vtype="C", lb=0, name=f"g_el{t}") for t in range(period)]  # 电解槽产热
         # ----hst----#
-        hst = m.addVar(vtype="C", lb=param_input["device"]["hst"]["sto_min"],
-                       ub=param_input["device"]["hst"]["sto_max"],
+        hst = m.addVar(vtype="C", lb=param_input["device"]["hst"]["sto_min"]*en_hst,
+                       ub=param_input["device"]["hst"]["sto_max"]*en_hst,
                        name=f"hst")  # 储氢罐规划容量
         h_sto = [m.addVar(vtype="C", lb=0, name=f"h_sto{t}") for t in range(period)]  # 储氢罐t时刻储氢量
         # ----ht----#
-        m_ht = m.addVar(vtype="C", lb=param_input["device"]["ht"]["water_min"],
-                        ub=param_input["device"]["ht"]["water_max"],
+        m_ht = m.addVar(vtype="C", lb=param_input["device"]["ht"]["water_min"]*en_ht,
+                        ub=param_input["device"]["ht"]["water_max"]*en_ht,
                         name=f"m_ht")  # 储热罐的规划容量
         g_ht_in = [m.addVar(vtype="C", lb=0, name=f"g_ht_in{t}") for t in range(period)]
         g_ht_out = [m.addVar(vtype="C", lb=0, name=f"g_ht_out{t}") for t in range(period)]
         g_ht = [m.addVar(vtype="C", lb=0, name=f"g_ht{t}") for t in range(period)]  # 存储的热量
         # 写完约束之后再看看有没有需要创建的变量
         # ----ct----#
-        m_ct = m.addVar(vtype="C", lb=param_input["device"]["ct"]["water_max"],
-                        ub=param_input["device"]["ct"]["water_max"],
+        m_ct = m.addVar(vtype="C", lb=param_input["device"]["ct"]["water_max"]*en_ct,
+                        ub=param_input["device"]["ct"]["water_max"]*en_ct,
                         name=f"m_ct")  # 储冷罐的规划容量
         q_ct_in = [m.addVar(vtype="C", lb=0, name=f"q_ct_in{t}") for t in range(period)]
         q_ct_out = [m.addVar(vtype="C", lb=0, name=f"q_ct_out{t}") for t in range(period)]  # 写完约束之后再看看有没有需要创建的变量
         q_ct = [m.addVar(vtype="C", lb=0, name=f"q_ct{t}") for t in range(period)]  # 存储的冷量
         # ----bat----#
-        p_bat_max = m.addVar(vtype="C", lb=param_input["device"]["bat"]["power_min"], ub=param_input["device"]["bat"]["power_max"], name=f"p_bat_max")
+        p_bat_max = m.addVar(vtype="C", lb=param_input["device"]["bat"]["power_min"]*en_bat,
+                             ub=param_input["device"]["bat"]["power_max"]*en_bat, name=f"p_bat_max")
         p_bat_in = [m.addVar(vtype="C", lb=0, name=f"p_bat_in{t}") for t in range(period)]
         p_bat_out = [m.addVar(vtype="C", lb=0, name=f"p_bat_out{t}") for t in range(period)]
         p_bat_sto = [m.addVar(vtype="C", lb=0, name=f"p_bat_sto{t}") for t in range(period)]
         # ----steam_storage----#
         m_steam_sto_max = m.addVar(vtype="C",
-                                   lb=param_input["device"]["steam_storage"]["water_min"],
-                                   ub=param_input["device"]["steam_storage"]["water_max"],
+                                   lb=param_input["device"]["steam_storage"]["water_min"]*en_steam_storage,
+                                   ub=param_input["device"]["steam_storage"]["water_max"]*en_steam_storage,
                                    name=f"m_steam_sto_max")
         m_steam_sto_in = [m.addVar(vtype="C", lb=0, name=f"m_steam_sto_in{t}") for t in range(period)]
         m_steam_sto_out = [m.addVar(vtype="C", lb=0, name=f"m_steam_sto_out{t}") for t in range(period)]
         m_steam_sto = [m.addVar(vtype="C", lb=0, name=f"m_steam_sto{t}") for t in range(period)]
         # ----pv----#
-        p_pv_max = m.addVar(vtype="C", lb=param_input["device"]["pv"]["power_min"], ub=param_input["device"]["pv"]["power_max"], name=f"p_pv_max")  # 光伏板投资面积
+        p_pv_max = m.addVar(vtype="C", lb=param_input["device"]["pv"]["power_min"]*en_pv,
+                            ub=param_input["device"]["pv"]["power_max"]*en_pv, name=f"p_pv_max")  # 光伏板投资面积
         p_pv = [m.addVar(vtype="C", lb=0,name=f"p_pv{t}") for t in range(period)]  # 光伏板发电功率
         # ----sc----#
-        s_sc = m.addVar(vtype="C", lb=param_input["device"]["sc"]["area_min"],
-                        ub=param_input["device"]["sc"]["area_max"],
+        s_sc = m.addVar(vtype="C", lb=param_input["device"]["sc"]["area_min"]*en_sc,
+                        ub=param_input["device"]["sc"]["area_max"]*en_sc,
                         name=f"s_sc")  # 太阳能集热器投资面积
         g_sc = [m.addVar(vtype="C", lb=0, name=f"g_sc{t}") for t in range(period)]  # 太阳能集热器收集的热量
         # ----wd----#
-        num_wd = m.addVar(vtype="INTEGER", lb=param_input["device"]["wd"]["number_min"],
-                          ub=param_input["device"]["wd"]["number_max"],
+        num_wd = m.addVar(vtype="INTEGER", lb=param_input["device"]["wd"]["number_min"]*en_wd,
+                          ub=param_input["device"]["wd"]["number_max"]*en_wd,
                           name=f"num_wd")  # 风电投资数量
         p_wd = [m.addVar(vtype="C", lb=0, name=f"p_wd{t}") for t in range(period)]  # 风电发电功率
         # ----eb----#
-        p_eb_max = m.addVar(vtype="C", lb=param_input["device"]["eb"]["power_min"],
-                            ub=param_input["device"]["eb"]["power_max"],
+        p_eb_max = m.addVar(vtype="C", lb=param_input["device"]["eb"]["power_min"]*en_eb,
+                            ub=param_input["device"]["eb"]["power_max"]*en_eb,
                             name=f"p_eb_max")  # 电锅炉投资容量（最大功率）
         g_eb = [m.addVar(vtype="C", lb=0, name=f"g_eb{t}") for t in range(period)]  # 电锅炉产热
         p_eb = [m.addVar(vtype="C", lb=0, name=f"p_eb{t}") for t in range(period)]  # 电锅炉耗电
         # ----abc----#
-        g_abc_max = m.addVar(vtype="C", lb=param_input["device"]["abc"]["power_min"],
-                            ub=param_input["device"]["abc"]["power_max"],
+        g_abc_max = m.addVar(vtype="C", lb=param_input["device"]["abc"]["power_min"]*en_abc,
+                            ub=param_input["device"]["abc"]["power_max"]*en_abc,
                             name=f"g_abc_max")  # 投资容量（最大功率）
         g_abc = [m.addVar(vtype="C", lb=0, name=f"g_abc{t}") for t in range(period)]  # 耗热
         q_abc = [m.addVar(vtype="C", lb=0, name=f"q_abc{t}") for t in range(period)]  # 产冷
         # ----ac----#
-        p_ac_max = m.addVar(vtype="C", lb=param_input["device"]["ac"]["power_min"],
-                            ub=param_input["device"]["ac"]["power_max"],
+        p_ac_max = m.addVar(vtype="C", lb=param_input["device"]["ac"]["power_min"]*en_ac,
+                            ub=param_input["device"]["ac"]["power_max"]*en_ac,
                             name=f"p_ac_max")  # 空调投资容量（最大功率）
         p_ac = [m.addVar(vtype="C", lb=0, name=f"p_ac{t}") for t in range(period)]  # 电锅炉产热
         q_ac = [m.addVar(vtype="C", lb=0, name=f"q_ac{t}") for t in range(period)]  # 电锅炉耗电
         # ----hp----#
         p_hp_max = m.addVar(vtype="C", lb=0,
-                            ub=param_input["device"]["hp"]["power_max"],
+                            ub=param_input["device"]["hp"]["power_max"]*en_hp,
                             name=f"p_hp_max")  # 空气源热泵投资容量（最大功率）
         p_hp = [m.addVar(vtype="C", lb=0, name=f"p_hp{t}") for t in range(period)]  # 热泵产热耗电
         p_hpc = [m.addVar(vtype="C", lb=0, name=f"p_hpc{t}") for t in range(period)]  # 热泵产冷的耗电
         q_hp = [m.addVar(vtype="C", lb=0, name=f"q_hp{t}") for t in range(period)]  # 热泵产冷
         g_hp = [m.addVar(vtype="C", lb=0, name=f"g_hp{t}") for t in range(period)]  # 热泵产热
         # ----ghp----#
-        p_ghp_max = m.addVar(vtype="C", lb=param_input["device"]["ghp"]["power_min"],
-                             ub=param_input["device"]["ghp"]["power_max"],
+        p_ghp_max = m.addVar(vtype="C", lb=param_input["device"]["ghp"]["power_min"]*en_ghp,
+                             ub=param_input["device"]["ghp"]["power_max"]*en_ghp,
                              name=f"p_ghp_max")  # 地源热泵投资容量（最大功率）
         p_ghp = [m.addVar(vtype="C", lb=0, name=f"p_ghp{t}") for t in range(period)]  # 热泵产热耗电
         p_ghpc = [m.addVar(vtype="C", lb=0, name=f"p_ghpc{t}") for t in range(period)]  # 热泵产冷的耗电
@@ -508,36 +534,36 @@ class ISService:
         q_ghp = [m.addVar(vtype="C", lb=0, name=f"q_ghp{t}") for t in range(period)]  # 热泵产冷
         g_ghp_gr = [m.addVar(vtype="C", lb=0, name=f"g_ghp_gr{t}") for t in range(period)]  # 热泵灌热
         # ----ghp_deep----#
-        p_ghp_deep_max = m.addVar(vtype="C", lb=param_input["device"]["ghp_deep"]["power_min"],
-                                  ub=param_input["device"]["ghp_deep"]["power_max"],
+        p_ghp_deep_max = m.addVar(vtype="C", lb=param_input["device"]["ghp_deep"]["power_min"]*en_ghp_deep,
+                                  ub=param_input["device"]["ghp_deep"]["power_max"]*en_ghp_deep,
                                   name=f"p_ghp_deep_max")  # 地源热泵投资容量（最大功率）
         p_ghp_deep = [m.addVar(vtype="C", lb=0, name=f"p_ghp_deep{t}") for t in range(period)]  # 热泵产热耗电
         g_ghp_deep = [m.addVar(vtype="C", lb=0, name=f"g_ghp_deep{t}") for t in range(period)]  # 热泵产热
         # ----gtw----#
-        num_gtw = m.addVar(vtype="INTEGER", lb=param_input["device"]["gtw"]["number_min"],
-                           ub=param_input["device"]["gtw"]["number_max"],
+        num_gtw = m.addVar(vtype="INTEGER", lb=param_input["device"]["gtw"]["number_min"]*en_gtw,
+                           ub=param_input["device"]["gtw"]["number_max"]*en_gtw,
                            name='num_gtw')  # 地热井投资数量
         # ----gtw2500----#
-        num_gtw2500 = m.addVar(vtype="INTEGER", lb=param_input["device"]["gtw2500"]["number_min"],
-                           ub=param_input["device"]["gtw2500"]["number_max"],
+        num_gtw2500 = m.addVar(vtype="INTEGER", lb=param_input["device"]["gtw2500"]["number_min"]*en_gtw2500,
+                           ub=param_input["device"]["gtw2500"]["number_max"]*en_gtw2500,
                            name='num_gtw2')  # 2500深度地热井投资数量
         # ----hp120----#
-        p_hp120_max = m.addVar(vtype="C", lb=param_input["device"]["hp120"]["power_min"],
-                               ub=param_input["device"]["hp120"]["power_max"],
+        p_hp120_max = m.addVar(vtype="C", lb=param_input["device"]["hp120"]["power_min"]*en_hp120,
+                               ub=param_input["device"]["hp120"]["power_max"]*en_hp120,
                                name=f"p_hp120_max")  # 余热热泵投资容量（最大功率）
         p_hp120 = [m.addVar(vtype="C", lb=0, name=f"p_hp120{t}") for t in range(period)]  # 高温热泵耗电量
         m_hp120 = [m.addVar(vtype="C", lb=0, name=f"m_hp120{t}") for t in range(period)]    # 输出120蒸汽
         g_hp120_in = [m.addVar(vtype="C", lb=0, name=f"g_hp120_in{t}") for t in range(period)]  # 输入热源
         # ----co180----#
-        p_co180_max = m.addVar(vtype="C", lb=param_input["device"]["co180"]["power_min"],
-                               ub=param_input["device"]["co180"]["power_max"],
+        p_co180_max = m.addVar(vtype="C", lb=param_input["device"]["co180"]["power_min"]*en_co180,
+                               ub=param_input["device"]["co180"]["power_max"]*en_co180,
                                name=f"p_co180_max")  # 余热热泵投资容量（最大功率）
         p_co180 = [m.addVar(vtype="C", lb=0, name=f"p_co180{t}") for t in range(period)]  # 高温压缩机耗电量
         m_co180_in = [m.addVar(vtype="C", lb=0, name=f"m_co180_in{t}") for t in range(period)]
         m_co180_out = [m.addVar(vtype="C", lb=0, name=f"m_co180_out{t}") for t in range(period)]
         # ----whp----#
-        p_whp_max = m.addVar(vtype="C", lb=param_input["device"]["whp"]["power_min"],
-                             ub=param_input["device"]["whp"]["power_max"],
+        p_whp_max = m.addVar(vtype="C", lb=param_input["device"]["whp"]["power_min"]*en_whp,
+                             ub=param_input["device"]["whp"]["power_max"]*en_whp,
                              name=f"p_whp_max")  # 余热热泵投资容量（最大功率）
         p_whp = [m.addVar(vtype="C", lb=0, name=f"p_whp{t}") for t in range(period)]  # 余热热泵产热耗电量
         p_whpc = [m.addVar(vtype="C", lb=0, name=f"p_whpc{t}") for t in range(period)]  # 余热热泵产冷耗电量
@@ -654,46 +680,52 @@ class ISService:
         #-----------------------------基础设备库的设备约束-----------------------------#
         #-----co----#
             m.addCons(p_co[i] == k_co * h_el[i])  # 压缩氢耗电量约束
-            m.addCons(p_co[i] <= p_co_max + param_input["device"]["co"]["power_already"])  # 压缩机运行功率上限
+            m.addCons(p_co[i] <= p_co_max + param_input["device"]["co"]["power_already"]*en_co)  # 压缩机运行功率上限
         # ----fc----#
             m.addCons(g_fc[i] <= fc_theta_ex * k_fc_g * h_fc[i])  # 氢转热约束，允许弃热
             m.addCons(p_fc[i] == k_fc_p * h_fc[i])  # 氢转电约束
-            m.addCons(p_fc[i] <= p_fc_max + param_input["device"]["fc"]["power_already"])  # 运行功率 <= 规划功率（运行最大功率）+ 已有装机
+            m.addCons(p_fc[i] <= p_fc_max + param_input["device"]["fc"]["power_already"]*en_fc)  # 运行功率 <= 规划功率（运行最大功率）+ 已有装机
         #----el----#
             m.addCons(h_el[i] <= k_el_h * p_el[i])  # 电转氢约束
             m.addCons(g_el[i] <= el_theta_ex * k_el_g * p_el[i])
             m.addCons(p_el[i] <= (p_el_max + p_el_already))  # 运行功率 <= 规划功率（运行最大功率）
-            m.addCons(h_el[i] <= hst + param_input["device"]["hst"]["sto_already"])  # 产生的氢气质量要小于储氢罐最大储氢容量
+            m.addCons(h_el[i] <= hst + param_input["device"]["hst"]["sto_already"]*en_el)  # 产生的氢气质量要小于储氢罐最大储氢容量
         #----hst----#
-            m.addCons(h_sto[i] <= hst + param_input["device"]["hst"]["sto_already"])
+            m.addCons(h_sto[i] <= hst + param_input["device"]["hst"]["sto_already"]*en_hst)
         #----ht----#
-            m.addCons(g_ht[i] <= (m_ht + param_input["device"]["ht"]["water_already"]) * k_ht_sto_max)  # 储热罐存储热量上限
-            m.addCons(g_ht[i] >= (m_ht + param_input["device"]["ht"]["water_already"]) * k_ht_sto_min)  # 储热罐存储热量下限
-            m.addCons(g_ht_in[i] <= (m_ht + param_input["device"]["ht"]["water_already"]) * k_ht_power_max)
-            m.addCons(g_ht_in[i] >= (m_ht + param_input["device"]["ht"]["water_already"]) * k_ht_power_min)
-            m.addCons(g_ht_out[i] <= (m_ht + param_input["device"]["ht"]["water_already"]) * k_ht_power_max)
-            m.addCons(g_ht_out[i] >= (m_ht + param_input["device"]["ht"]["water_already"]) * k_ht_power_min)
+            m.addCons(g_ht[i] <= (m_ht + param_input["device"]["ht"]["water_already"]*en_ht) * k_ht_sto_max)  # 储热罐存储热量上限
+            m.addCons(g_ht[i] >= (m_ht + param_input["device"]["ht"]["water_already"]*en_ht) * k_ht_sto_min)  # 储热罐存储热量下限
+            m.addCons(g_ht_in[i] <= (m_ht + param_input["device"]["ht"]["water_already"]*en_ht) * k_ht_power_max)
+            m.addCons(g_ht_in[i] >= (m_ht + param_input["device"]["ht"]["water_already"]*en_ht) * k_ht_power_min)
+            m.addCons(g_ht_out[i] <= (m_ht + param_input["device"]["ht"]["water_already"]*en_ht) * k_ht_power_max)
+            m.addCons(g_ht_out[i] >= (m_ht + param_input["device"]["ht"]["water_already"]*en_ht) * k_ht_power_min)
         #----ct----#
-            m.addCons(q_ct[i] <= (m_ct + param_input["device"]["ct"]["water_already"]) * k_ct_sto_max)  # 储冷罐存储冷量上限
-            m.addCons(q_ct[i] >= (m_ct + param_input["device"]["ct"]["water_already"]) * k_ct_sto_min)  # 储冷罐存储冷量下限
-            m.addCons(q_ct_in[i] <= (m_ct + param_input["device"]["ct"]["water_already"]) * k_ct_power_max)
-            m.addCons(q_ct_in[i] >= (m_ct + param_input["device"]["ct"]["water_already"]) * k_ct_power_min)
-            m.addCons(q_ct_out[i] <= (m_ct + param_input["device"]["ct"]["water_already"]) * k_ct_power_max)
-            m.addCons(q_ct_out[i] >= (m_ct + param_input["device"]["ct"]["water_already"]) * k_ct_power_min)
+            m.addCons(q_ct[i] <= (m_ct + param_input["device"]["ct"]["water_already"]*en_ct) * k_ct_sto_max)  # 储冷罐存储冷量上限
+            m.addCons(q_ct[i] >= (m_ct + param_input["device"]["ct"]["water_already"]*en_ct) * k_ct_sto_min)  # 储冷罐存储冷量下限
+            m.addCons(q_ct_in[i] <= (m_ct + param_input["device"]["ct"]["water_already"]*en_ct) * k_ct_power_max)
+            m.addCons(q_ct_in[i] >= (m_ct + param_input["device"]["ct"]["water_already"]*en_ct) * k_ct_power_min)
+            m.addCons(q_ct_out[i] <= (m_ct + param_input["device"]["ct"]["water_already"]*en_ct) * k_ct_power_max)
+            m.addCons(q_ct_out[i] >= (m_ct + param_input["device"]["ct"]["water_already"]*en_ct) * k_ct_power_min)
         # ----bat----#
-            m.addCons(p_bat_sto[i] <= (p_bat_max + param_input["device"]["bat"]["power_already"]) * k_bat_sto_max)  # 电池上限
-            m.addCons(p_bat_sto[i] >= (p_bat_max + param_input["device"]["bat"]["power_already"]) * k_bat_sto_min)  # 电池下限
-            m.addCons(p_bat_in[i] <= (p_bat_max + param_input["device"]["bat"]["power_already"]) * k_bat_power_max)
-            m.addCons(p_bat_in[i] >= (p_bat_max + param_input["device"]["bat"]["power_already"]) * k_bat_power_min)
-            m.addCons(p_bat_out[i] <= (p_bat_max + param_input["device"]["bat"]["power_already"]) * k_bat_power_max)
-            m.addCons(p_bat_out[i] >= (p_bat_max + param_input["device"]["bat"]["power_already"]) * k_bat_power_min)
+            m.addCons(p_bat_sto[i] <= (p_bat_max + param_input["device"]["bat"]["power_already"]*en_bat) * k_bat_sto_max)  # 电池上限
+            m.addCons(p_bat_sto[i] >= (p_bat_max + param_input["device"]["bat"]["power_already"]*en_bat) * k_bat_sto_min)  # 电池下限
+            m.addCons(p_bat_in[i] <= (p_bat_max + param_input["device"]["bat"]["power_already"]*en_bat) * k_bat_power_max)
+            m.addCons(p_bat_in[i] >= (p_bat_max + param_input["device"]["bat"]["power_already"]*en_bat) * k_bat_power_min)
+            m.addCons(p_bat_out[i] <= (p_bat_max + param_input["device"]["bat"]["power_already"]*en_bat) * k_bat_power_max)
+            m.addCons(p_bat_out[i] >= (p_bat_max + param_input["device"]["bat"]["power_already"]*en_bat) * k_bat_power_min)
         # ----steam_storage----#
-            m.addCons(m_steam_sto[i] <= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]) * k_steam_sto_max)
-            m.addCons(m_steam_sto[i] >= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]) * k_steam_sto_min)
-            m.addCons(m_steam_sto_in[i] <= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]) * k_steam_power_max)
-            m.addCons(m_steam_sto_in[i] >= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]) * k_steam_power_min)
-            m.addCons(m_steam_sto_out[i] <= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]) * k_steam_power_max)
-            m.addCons(m_steam_sto_out[i] >= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]) * k_steam_power_min)
+            m.addCons(m_steam_sto[i] <= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]*en_steam_storage)
+                      * k_steam_sto_max)
+            m.addCons(m_steam_sto[i] >= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]*en_steam_storage)
+                      * k_steam_sto_min)
+            m.addCons(m_steam_sto_in[i] <= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]*en_steam_storage)
+                      * k_steam_power_max)
+            m.addCons(m_steam_sto_in[i] >= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]*en_steam_storage)
+                      * k_steam_power_min)
+            m.addCons(m_steam_sto_out[i] <= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]*en_steam_storage)
+                      * k_steam_power_max)
+            m.addCons(m_steam_sto_out[i] >= (m_steam_sto_max + param_input["device"]["steam_storage"]["water_already"]*en_steam_storage)
+                      * k_steam_power_min)
 
         # 储能设备约束
         for i in range(period - 1):
@@ -708,30 +740,30 @@ class ISService:
 
         for i in range(period):
         # ---pv----#
-            m.addCons(p_pv[i] <= eta_pv * (p_pv_max + param_input["device"]["pv"]["power_already"]) * pv_data[i])  # 允许丢弃可再生能源
+            m.addCons(p_pv[i] <= eta_pv * (p_pv_max + param_input["device"]["pv"]["power_already"]*en_pv) * pv_data[i])  # 允许丢弃可再生能源
         # ----sc----#
-            m.addCons(g_sc[i] <= k_sc * sc_theta_ex * (s_sc + param_input["device"]["sc"]["area_already"]) * sc_data[i])  # 允许丢弃可再生能源
+            m.addCons(g_sc[i] <= k_sc * sc_theta_ex * (s_sc + param_input["device"]["sc"]["area_already"]*en_sc) * sc_data[i])  # 允许丢弃可再生能源
         # ----wd----#
-            m.addCons(p_wd[i] <= ((num_wd + param_input["device"]["wd"]["number_already"]) * wd_data[i] * capacity_wd))  # 允许丢弃可再生能源
+            m.addCons(p_wd[i] <= ((num_wd + param_input["device"]["wd"]["number_already"]*en_wd) * wd_data[i] * capacity_wd))  # 允许丢弃可再生能源
         # ---eb----#
             m.addCons(k_eb * p_eb[i] == g_eb[i])  # 电转热约束
-            m.addCons(p_eb[i] <= (p_eb_max + param_input["device"]["eb"]["power_already"]))  # 运行功率 <= 规划功率（运行最大功率）
+            m.addCons(p_eb[i] <= (p_eb_max + param_input["device"]["eb"]["power_already"]*en_eb))  # 运行功率 <= 规划功率（运行最大功率）
         # ---abc---#
             m.addCons(k_abc * g_abc[i] == q_abc[i])
-            m.addCons(g_abc[i] <= (g_abc_max + param_input["device"]["abc"]["power_already"]))
+            m.addCons(g_abc[i] <= (g_abc_max + param_input["device"]["abc"]["power_already"]*en_abc))
         # ---ac----#
             m.addCons(q_ac[i] == k_ac * p_ac[i])  # 电转冷约束
-            m.addCons(p_ac[i] <= (p_ac_max + param_input["device"]["ac"]["power_already"]))  # 运行功率 <= 规划功率（运行最大功率）
+            m.addCons(p_ac[i] <= (p_ac_max + param_input["device"]["ac"]["power_already"]*en_ac))  # 运行功率 <= 规划功率（运行最大功率）
         # ---hp----#
             m.addCons(p_hp[i] * k_hp_g == g_hp[i])  # 电转热约束
             m.addCons(p_hpc[i] * k_hp_q == q_hp[i])  # 电转冷约束
-            m.addCons(p_hp[i] + p_hpc[i] <= (p_hp_max + param_input["device"]["hp"]["power_already"]))
+            m.addCons(p_hp[i] + p_hpc[i] <= (p_hp_max + param_input["device"]["hp"]["power_already"]*en_hp))
         # ---ghp----#
             m.addCons(p_ghp[i] * k_ghp_g == g_ghp[i])  # 地源热泵电转热约束
             m.addCons(p_ghpc[i] * k_ghp_q == q_ghp[i])  # 地源热泵电转冷约束
-            m.addCons(p_ghp[i] + p_ghpc[i] <= (p_ghp_max + param_input["device"]["ghp"]["power_already"]))  # 热泵供冷运行功率 <= 规划功率（运行最大功率）
+            m.addCons(p_ghp[i] + p_ghpc[i] <= (p_ghp_max + param_input["device"]["ghp"]["power_already"]*en_ghp))  # 热泵供冷运行功率 <= 规划功率（运行最大功率）
             m.addCons(p_ghp_deep[i] * k_ghp_deep_g == g_ghp_deep[i])  # 地源热泵电转热约束
-            m.addCons(p_ghp_deep[i] <= (p_ghp_deep_max + param_input["device"]["ghp_deep"]["power_already"]))  # 热泵供热运行功率 <= 规划功率（运行最大功率）
+            m.addCons(p_ghp_deep[i] <= (p_ghp_deep_max + param_input["device"]["ghp_deep"]["power_already"]*en_ghp_deep))  # 热泵供热运行功率 <= 规划功率（运行最大功率）
         #----gtw----#
             m.addCons(num_gtw * p_gtw >= g_ghp[i] - p_ghp[i])  # 井和热泵有关联，制热量-电功率=取热量
             m.addCons(num_gtw * p_gtw >= q_ghp[i] + p_ghpc[i])  # 井和热泵有关联，制冷量+电功率=灌热量
@@ -739,17 +771,17 @@ class ISService:
         # ---hp120----#
             m.addCons(cop_hp120 * p_hp120[i] == m_hp120[i] * 750)  # 750 是热量和蒸汽量换算系数
             m.addCons((cop_hp120 - 1) * p_hp120[i] == g_hp120_in[i])
-            m.addCons(p_hp120[i] <= (p_hp120_max + param_input["device"]["hp120"]["power_already"]))
+            m.addCons(p_hp120[i] <= (p_hp120_max + param_input["device"]["hp120"]["power_already"]*en_hp120))
         # ---co180----#
             m.addCons(m_co180_out[i] == m_co180_in[i] * 1.1)
             m.addCons(m_co180_in[i] * k_co180 == p_co180[i])
-            m.addCons(p_co180[i] <= (p_co180_max + param_input["device"]["co180"]["power_already"]))
+            m.addCons(p_co180[i] <= (p_co180_max + param_input["device"]["co180"]["power_already"]*en_co180))
         # ---whp----#
             m.addCons(p_whp[i] * cop_whpg == g_whp[i])
             m.addCons(p_whpc[i] * cop_whpq == q_whp[i])
             m.addCons(g_whp[i] - p_whp[i] <= c * heat_resource[i] * param_input["trading"]["heat_resource"]["temperature_upper_limit"])
             m.addCons(q_whp[i] + p_whpc[i] <= c * heat_resource[i] * param_input["trading"]["heat_resource"]["temperature_decrease_limit"])
-            m.addCons(p_whp[i] + p_whpc[i] <= (p_whp_max + param_input["device"]["whp"]["power_already"]))
+            m.addCons(p_whp[i] + p_whpc[i] <= (p_whp_max + param_input["device"]["whp"]["power_already"]*en_whp))
         #-----------------------------用户自定义的设备约束-----------------------------#
         #---自定义能量交换设备---#
         for t in range(period):
@@ -832,8 +864,8 @@ class ISService:
         # 基准方案供冷模式
         if param_input["base"]["base_method_cooling"] == "集中供冷":
             load2ele_sum += sum(q_demand) / k_ac # 用电制冷
-        elif param_input["base"]["base_method_cooling"] == "水冷机组":
-            load2ele_sum += sum(q_demand) / eta_q_base_dict["水冷机组"]
+        elif param_input["base"]["base_method_cooling"] == "冷水机组":
+            load2ele_sum += sum(q_demand) / eta_q_base_dict["冷水机组"]
         else:
             raise ValueError("非法 base_method_cooling 值！")
         # 基准方案供氢模式
@@ -967,7 +999,8 @@ class ISService:
             if param_input["income"]["heat_type"] == "供暖面积":
                 revenue_heat = param_input["income"]["heat_price"] * param_input["objective_load"]["g_load_area"]
             elif param_input["income"]["heat_type"] == "热量":
-                revenue_heat = param_input["income"]["heat_price"] * sum(np.multiply(g_demand, (3600 / 1e6)).tolist())
+                # revenue_heat = param_input["income"]["heat_price"] * sum(np.multiply(g_demand, (3600 / 1e6)).tolist())
+                revenue_heat = param_input["income"]["heat_price"] * sum(g_demand)
             else:
                 raise ValueError("非法 heat_type 值！")
         # TODO: (ZYL) 确认该电价是不是使用 lambda_ele_revenue
@@ -983,11 +1016,12 @@ class ISService:
             if param_input["income"]["cool_type"] == "供冷面积":
                 revenue_cool = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
             elif param_input["income"]["cool_type"] == "冷量":
-                revenue_cool = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+                # revenue_cool = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+                revenue_cool = param_input["income"]["cool_price"] * sum(q_demand)
             else:
                 raise ValueError("非法 cool_type 值！")
-        elif param_input["base"]["base_method_cooling"] == "水冷机组":
-            revenue_cool = sum(lambda_ele_revenue[i] * q_demand[i] / eta_q_base_dict["水冷机组"] for i in range(period))
+        elif param_input["base"]["base_method_cooling"] == "冷水机组":
+            revenue_cool = sum(lambda_ele_revenue[i] * q_demand[i] / eta_q_base_dict["冷水机组"] for i in range(period))
         else:
             raise ValueError("非法 base_method_cooling 值！")
         revenue_h = lambda_h_in * sum([h_demand[i] for i in range(period)])
@@ -1032,10 +1066,11 @@ class ISService:
             if param_input["income"]["cool_type"] == "供冷面积":
                 opex_cool_eb = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
             elif param_input["income"]["cool_type"] == "冷量":
-                opex_cool_eb = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+                # opex_cool_eb = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+                opex_cool_eb = param_input["income"]["cool_price"] * sum(q_demand)
             else:
                 raise ValueError("非法 cool_type 值！")
-        elif param_input["base"]["base_method_cooling"] == "水冷机组":
+        elif param_input["base"]["base_method_cooling"] == "冷水机组":
             capex_q_eb = max(q_demand) / k_ac * cost_ac
         else:
             raise ValueError("非法 base_method_cooling 值！")
@@ -1123,10 +1158,11 @@ class ISService:
             if param_input["income"]["cool_type"] == "供冷面积":
                 opex_cool_gas = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
             elif param_input["income"]["cool_type"] == "冷量":
-                opex_cool_gas = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+                # opex_cool_gas = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
+                opex_cool_gas = param_input["income"]["cool_price"] * sum(q_demand)
             else:
                 raise ValueError("非法 cool_type 值！")
-        elif param_input["base"]["base_method_cooling"] == "水冷机组":
+        elif param_input["base"]["base_method_cooling"] == "冷水机组":
             capex_q_gas = max(q_demand) / k_ac * cost_ac
         else:
             raise ValueError("非法 base_method_cooling 值！")
@@ -1187,7 +1223,7 @@ class ISService:
         wd_capex = m.getVal(num_wd) * cost_wd  # 风电机组投资成本 (元)
         eb_capex = m.getVal(p_eb_max) * cost_eb  # 电锅炉投资成本 (元)
         abc_capex = m.getVal(g_abc_max) * cost_abc  # 吸收式制冷机投资成本 (元)
-        ac_capex = m.getVal(p_ac_max) * cost_ac  # 水冷机组投资成本 (元)
+        ac_capex = m.getVal(p_ac_max) * cost_ac  # 冷水机组投资成本 (元)
         hp_capex = m.getVal(p_hp_max) * cost_hp  # 空气源热泵投资成本 (元)
         ghp_capex = m.getVal(p_ghp_max) * cost_ghp  # 浅层地源热泵投资成本 (元)
         ghp_deep_capex = m.getVal(p_ghp_deep_max) * cost_ghp_deep  # 中深层地源热泵投资成本 (元)
