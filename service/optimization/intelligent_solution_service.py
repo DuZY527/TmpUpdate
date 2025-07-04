@@ -369,7 +369,7 @@ class ISService:
             if device["energy_type"] not in energy_type_list:
                 raise ValueError(f"Invalid energy type '{device['energy_type']}' in custom storage device.")
             # 获取能量类型索引
-            csd_energy_type_index[i] = energy_type_list.index(device["energy_type"])
+            csd_energy_type_index[i] = int(device["energy_type"])
             k_install2sto_max_csd[i] = device["energy_storage_max_per_unit"]
             k_install2sto_min_csd[i] = device["energy_storage_min_per_unit"]
             k_sto2io_max_csd[i] = device["energy_power_max_per_unit"]
@@ -851,20 +851,20 @@ class ISService:
         load2co_heat = 0
         load2co_steam = 0
         # 基准方案供热模式
-        if param_input["base"]["base_method_heating"] == "集中供热":
+        if param_input["base"]["base_method_heating"] == "central":
             load2co_heat = sum(g_demand) * 319.5 / 1000             # 使用燃煤锅炉供热 供热1000kwh 碳排319.5kg
-        elif param_input["base"]["base_method_heating"] == "电锅炉":
+        elif param_input["base"]["base_method_heating"] == "eb":
             load2ele_sum += sum(g_demand) / eta_g_base_dict["电锅炉"]
-        elif param_input["base"]["base_method_heating"] == "空气源热泵":
+        elif param_input["base"]["base_method_heating"] == "hp":
             load2ele_sum += sum(g_demand) / eta_g_base_dict["空气源热泵"]
-        elif param_input["base"]["base_method_heating"] == "燃气锅炉":
+        elif param_input["base"]["base_method_heating"] == "gb":
             load2gas_sum += sum(g_demand) / eta_g_base_dict["燃气锅炉"]
         else:
             raise ValueError("非法 base_method_heating 值！")
         # 基准方案供冷模式
-        if param_input["base"]["base_method_cooling"] == "集中供冷":
+        if param_input["base"]["base_method_cooling"] == "central":
             load2ele_sum += sum(q_demand) / k_ac # 用电制冷
-        elif param_input["base"]["base_method_cooling"] == "冷水机组":
+        elif param_input["base"]["base_method_cooling"] == "ac":
             load2ele_sum += sum(q_demand) / eta_q_base_dict["冷水机组"]
         else:
             raise ValueError("非法 base_method_cooling 值！")
@@ -872,23 +872,23 @@ class ISService:
         load2h_sum += sum(h_demand)
         # 基准方案供蒸汽模式（测试时先统一为 base_method_steam）
         # 按燃煤系数计算
-        if param_input["base"]["base_method_steam"] == "购买蒸汽":
+        if param_input["base"]["base_method_steam"] == "pur":
             load2co_steam += sum(steam120_demand) * 750 * 319.5 / 1000
             load2co_steam += sum(steam180_demand) * 770 * 319.5 / 1000
-        elif param_input["base"]["base_method_steam"] == "电锅炉":
+        elif param_input["base"]["base_method_steam"] == "eb":
             load2ele_sum += sum(steam120_demand) / eta_steam120_base_dict["电锅炉"]
             load2ele_sum += sum(steam180_demand) / eta_steam180_base_dict["电锅炉"]
-        elif param_input["base"]["base_method_steam"] == "燃气锅炉":
+        elif param_input["base"]["base_method_steam"] == "gb":
             load2gas_sum += sum(steam120_demand) / eta_steam120_base_dict["燃气锅炉"]
             load2gas_sum += sum(steam180_demand) / eta_steam180_base_dict["燃气锅炉"]
         else:
             raise ValueError("非法 base_method_steam 值！")
         # 基准方案供热水模式
-        if param_input["base"]["base_method_hotwater"] == "电锅炉":
+        if param_input["base"]["base_method_hotwater"] == "eb":
             load2ele_sum += sum(hotwater_demand) / eta_hotwater_base_dict["电锅炉"]
-        elif param_input["base"]["base_method_hotwater"] == "空气源热泵":
+        elif param_input["base"]["base_method_hotwater"] == "hp":
             load2ele_sum += sum(hotwater_demand) / eta_hotwater_base_dict["空气源热泵"]
-        elif param_input["base"]["base_method_hotwater"] == "燃气锅炉":
+        elif param_input["base"]["base_method_hotwater"] == "gb":
             load2gas_sum += sum(hotwater_demand) / eta_hotwater_base_dict["燃气锅炉"]
         else:
             raise ValueError("非法 base_method_hotwater 值！")
@@ -988,61 +988,61 @@ class ISService:
         cost_annual_per_energy = cost_annual / (whole_energy + 1e-7)
 
         # TODO: (前端) 确认返回值
-        if param_input["income"]["power_type"] == "买电电价折扣":
+        if param_input["income"]["power_type"] == "discount":
             lambda_ele_revenue = [price * param_input["income"]["power_price"] / 100 for price in lambda_ele_in]
-        elif param_input["income"]["power_type"] == "固定价格":
+        elif param_input["income"]["power_type"] == "fixed":
             lambda_ele_revenue = [param_input["income"]["power_price"]] * period
         else:
             raise ValueError("非法 power_type 值！")
         revenue_ele = sum(lambda_ele_revenue[i] * ele_load[i] for i in range(period))
-        if param_input["base"]["base_method_heating"] == "集中供热":
-            if param_input["income"]["heat_type"] == "供暖面积":
+        if param_input["base"]["base_method_heating"] == "central":
+            if param_input["income"]["heat_type"] == "area":
                 revenue_heat = param_input["income"]["heat_price"] * param_input["objective_load"]["g_load_area"]
-            elif param_input["income"]["heat_type"] == "热量":
+            elif param_input["income"]["heat_type"] == "energy":
                 # revenue_heat = param_input["income"]["heat_price"] * sum(np.multiply(g_demand, (3600 / 1e6)).tolist())
                 revenue_heat = param_input["income"]["heat_price"] * sum(g_demand)
             else:
                 raise ValueError("非法 heat_type 值！")
         # TODO: (ZYL) 确认该电价是不是使用 lambda_ele_revenue
-        elif param_input["base"]["base_method_heating"] == "电锅炉":
+        elif param_input["base"]["base_method_heating"] == "eb":
             revenue_heat = sum(lambda_ele_revenue[i] * g_demand[i] / eta_g_base_dict["电锅炉"] for i in range(period))
-        elif param_input["base"]["base_method_heating"] == "空气源热泵":
+        elif param_input["base"]["base_method_heating"] == "hp":
             revenue_heat = sum(lambda_ele_revenue[i] * g_demand[i] / eta_g_base_dict["空气源热泵"] for i in range(period))
-        elif param_input["base"]["base_method_heating"] == "燃气锅炉":
+        elif param_input["base"]["base_method_heating"] == "gb":
             revenue_heat = sum(gas_price * g_demand[i] / eta_g_base_dict["燃气锅炉"] for i in range(period))
         else:
             raise ValueError("非法 base_method_heating 值！")
-        if param_input["base"]["base_method_cooling"] == "集中供冷":
-            if param_input["income"]["cool_type"] == "供冷面积":
+        if param_input["base"]["base_method_cooling"] == "central":
+            if param_input["income"]["cool_type"] == "area":
                 revenue_cool = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
-            elif param_input["income"]["cool_type"] == "冷量":
+            elif param_input["income"]["cool_type"] == "energy":
                 # revenue_cool = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
                 revenue_cool = param_input["income"]["cool_price"] * sum(q_demand)
             else:
                 raise ValueError("非法 cool_type 值！")
-        elif param_input["base"]["base_method_cooling"] == "冷水机组":
+        elif param_input["base"]["base_method_cooling"] == "ac":
             revenue_cool = sum(lambda_ele_revenue[i] * q_demand[i] / eta_q_base_dict["冷水机组"] for i in range(period))
         else:
             raise ValueError("非法 base_method_cooling 值！")
         revenue_h = lambda_h_in * sum([h_demand[i] for i in range(period)])
-        if param_input["base"]["base_method_steam"] == "购买蒸汽":
+        if param_input["base"]["base_method_steam"] == "pur":
             # TODO: (DZY, ZYL) 确认计价方式，是使用 income.steam_price 还是使用 lambda_steam_in
             revenue_steam120 = param_input["income"]["steam_price"] * sum(steam120_demand)
             revenue_steam180 = param_input["income"]["steam_price"] * sum(steam180_demand)
-        elif param_input["base"]["base_method_steam"] == "电锅炉":
+        elif param_input["base"]["base_method_steam"] == "eb":
             revenue_steam120 = sum(lambda_ele_revenue[i] * steam120_demand[i] / eta_steam120_base_dict["电锅炉"] for i in range(period))
             revenue_steam180 = sum(lambda_ele_revenue[i] * steam180_demand[i] / eta_steam180_base_dict["电锅炉"] for i in range(period))
-        elif param_input["base"]["base_method_steam"] == "燃气锅炉":
+        elif param_input["base"]["base_method_steam"] == "gb":
             revenue_steam120 = sum(gas_price * steam120_demand[i] / eta_steam120_base_dict["燃气锅炉"] for i in range(period))
             revenue_steam180 = sum(gas_price * steam180_demand[i] / eta_steam180_base_dict["燃气锅炉"] for i in range(period))
         else:
             raise ValueError("非法 base_method_steam 值！")
 
-        if param_input["base"]["base_method_hotwater"] == "电锅炉":
+        if param_input["base"]["base_method_hotwater"] == "eb":
             revenue_hotwater = sum(lambda_ele_revenue[i] * hotwater_demand[i] / eta_hotwater_base_dict["电锅炉"] for i in range(period))
-        elif param_input["base"]["base_method_hotwater"] == "空气源热泵":
+        elif param_input["base"]["base_method_hotwater"] == "hp":
             revenue_hotwater = sum(lambda_ele_revenue[i] * hotwater_demand[i] / eta_hotwater_base_dict["空气源热泵"] for i in range(period))
-        elif param_input["base"]["base_method_hotwater"] == "燃气锅炉":
+        elif param_input["base"]["base_method_hotwater"] == "eb":
             revenue_hotwater = sum(gas_price * hotwater_demand[i] / eta_hotwater_base_dict["燃气锅炉"] for i in range(period))
         else:
             raise ValueError("非法 base_method_hotwater 值！")
@@ -1062,15 +1062,15 @@ class ISService:
         opex_cool_eb = 0
         capex_q_eb = 0
         # TODO: (DZY, ZYL) 确认对比方案供冷方式，先使用水冷机组供冷 + 集中供冷
-        if param_input["base"]["base_method_cooling"] == "集中供冷":
-            if param_input["income"]["cool_type"] == "供冷面积":
+        if param_input["base"]["base_method_cooling"] == "central":
+            if param_input["income"]["cool_type"] == "area":
                 opex_cool_eb = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
-            elif param_input["income"]["cool_type"] == "冷量":
+            elif param_input["income"]["cool_type"] == "energy":
                 # opex_cool_eb = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
                 opex_cool_eb = param_input["income"]["cool_price"] * sum(q_demand)
             else:
                 raise ValueError("非法 cool_type 值！")
-        elif param_input["base"]["base_method_cooling"] == "冷水机组":
+        elif param_input["base"]["base_method_cooling"] == "ac":
             capex_q_eb = max(q_demand) / k_ac * cost_ac
         else:
             raise ValueError("非法 base_method_cooling 值！")
@@ -1154,15 +1154,15 @@ class ISService:
         opex_cool_gas = 0
         capex_q_gas = 0
         # RE: 确认对比方案供冷方式，先使用水冷机组供冷+集中供冷
-        if param_input["base"]["base_method_cooling"] == "集中供冷":
-            if param_input["income"]["cool_type"] == "供冷面积":
+        if param_input["base"]["base_method_cooling"] == "central":
+            if param_input["income"]["cool_type"] == "area":
                 opex_cool_gas = param_input["income"]["cool_price"] * param_input["objective_load"]["q_load_area"]
-            elif param_input["income"]["cool_type"] == "冷量":
+            elif param_input["income"]["cool_type"] == "energy":
                 # opex_cool_gas = param_input["income"]["cool_price"] * sum(np.multiply(q_demand, (3600 / 1e6)).tolist())
                 opex_cool_gas = param_input["income"]["cool_price"] * sum(q_demand)
             else:
                 raise ValueError("非法 cool_type 值！")
-        elif param_input["base"]["base_method_cooling"] == "冷水机组":
+        elif param_input["base"]["base_method_cooling"] == "ac":
             capex_q_gas = max(q_demand) / k_ac * cost_ac
         else:
             raise ValueError("非法 base_method_cooling 值！")
