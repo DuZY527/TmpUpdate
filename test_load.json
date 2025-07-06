@@ -1,0 +1,80 @@
+{
+  "autoload": false,
+  "fileaddress": "/path/to/load_data.json",
+  "province": "江苏省",
+  "city": "南京市",
+  "heating_cycle": {
+    "start": "11-01",
+    "end": "03-31"
+  },
+  "cooling_cycle": {
+    "start": "07-01",
+    "end": "07-01"
+  },
+  "location": [118.78, 32.04],
+  "load_area": 16031.85,
+  "industrial_load": {
+    "flag": true,
+    "industrial_mode": {
+      "single_peak": [1200.5, 800.2],
+      "double_peak": [900.0, 1100.75],
+      "midday_trough": [750.3, 850.6],
+      "relatively_uniform": [950.1, 980.9],
+      "nighttime_energy_usage": [600.8, 700.4]
+    }
+  },
+  "cooling_heating_power": [
+    {
+      "name": "6",
+      "type": "fuck",
+      "target_area": 16031.85,
+      "idf_file": "320.idf",
+      "epw_file": "CHN_Gansu.Minqin.526810_CSWD.epw",
+      "electricity_total_kwh": 35000000,
+      "heating_cycle": {
+        "start": "11-01",
+        "end": "03-31"
+      },
+      "cooling_cycle": {
+        "start": "07-01",
+        "end": "07-01"
+      },
+      "materials": [
+        {
+          "material_name": "XIAN_Wenjiaoyuan_22_Wall_4_.015",
+          "new_thickness": 0.02,
+          "new_conductivity": 1.5
+        },
+        {
+          "material_name": "XIAN_Wenjiaoyuan_22_Roof_2_.025",
+          "new_thickness": 0.03,
+          "new_conductivity": 1.5
+        }
+      ],
+      "glazing": {
+        "glazing_name": "Simple XIAN_Wenjiaoyuan_22_ExternalWindows - 1001",
+        "u": 1.5,
+        "shgc": 0.4,
+        "vt": 0.75
+      },
+      "wwrs": {
+        "North": 0.2,
+        "East": 0.3,
+        "South": 0.4,
+        "West": 0.1
+      }
+    }
+  ],
+  "other_load": [
+    {
+      "id": "OL-001",
+      "name": "实验设备电力",
+      "flag": false,
+      "start_time": "08:00:00",
+      "end_time": "18:00:00",
+      "type": "恒功率",
+      "temperature": 25.0,
+      "circle_load": [15.5, 18.2, 20.1, 22.3, 25.0, 23.8]
+    }
+  ]
+}

@@ -42,10 +42,10 @@
     "base": {
         "area_outside": 20000,
         "power_pv_house_top": 10000,
-        "base_method_heating": "电锅炉",
-        "base_method_cooling": "水冷机组",
-        "base_method_steam": "购买蒸汽",
-        "base_method_hotwater": "空气源热泵",
+        "base_method_heating": "eb",
+        "base_method_cooling": "ac",
+        "base_method_steam": "pur",
+        "base_method_hotwater": "hp",
         "cer_enable": true,
         "cer": 0.4,
         "other_investment": 0.2
@@ -120,17 +120,18 @@
         }
     },
     "income": {
-        "power_type": "固定价格",
+        "power_type": "fixed",
         "power_price": 0.42,
-        "heat_type": "供暖面积",
+        "heat_type": "area",
         "heat_price": 37,
-        "cool_type": "供冷面积",
+        "cool_type": "area",
         "cool_price": 9.5,
         "hot_water_price": 0,
         "steam_price": 0
     },
     "device": {
         "co": {
+            "used": true,
             "power_already": 0,
             "power_max": 20000,
             "power_min": 0,
@@ -139,6 +140,7 @@
             "beta_co": 1.399
         },
         "fc": {
+            "used": true,
             "power_already": 100,
             "power_max": 10000,
             "power_min": 0,
@@ -149,6 +151,7 @@
             "theta_ex": 0.95
         },
         "el": {
+            "used": true,
             "nm3_already": 100,
             "nm3_max": 10000,
             "nm3_min": 0,
@@ -159,6 +162,7 @@
             "theta_ex": 0.95
         },
         "hst": {
+            "used": true,
             "sto_already": 0,
             "sto_max": 10000,
             "sto_min": 0,
@@ -166,6 +170,7 @@
             "crf": 15
         },
         "ht": {
+            "used": true,
             "water_already": 0,
             "water_max": 0,
             "water_min": 0,
@@ -178,6 +183,7 @@
             "g_power_min_per_unit": 0
         },
         "ct": {
+            "used": true,
             "water_already": 0,
             "water_max": 0,
             "water_min": 0,
@@ -190,6 +196,7 @@
             "q_power_min_per_unit": 0
         },
         "bat": {
+            "used": true,
             "power_already": 0,
             "power_max": 0,
             "power_min": 0,
@@ -202,6 +209,7 @@
             "ele_power_min_per_unit": 0
         },
         "steam_storage": {
+            "used": true,
             "water_already": 0,
             "water_max": 2000,
             "water_min": 0,
@@ -214,6 +222,7 @@
             "steam_power_min_per_unit": 0
         },
         "pv": {
+            "used": true,
             "power_already": 0,
             "power_max": 5000,
             "power_min": 0,
@@ -224,6 +233,7 @@
             "s_pv_per_unit": 10
         },
         "sc": {
+            "used": true,
             "area_already": 0,
             "area_max": 0,
             "area_min": 0,
@@ -235,6 +245,7 @@
             "s_sc_per_unit": 10
         },
         "wd": {
+            "used": true,
             "number_already": 0,
             "number_max": 10,
             "number_min": 0,
@@ -245,6 +256,7 @@
             "s_wd_per_unit": 2000
         },
         "eb": {
+            "used": true,
             "power_already": 0,
             "power_max": 0,
             "power_min": 0,
@@ -253,6 +265,7 @@
             "beta_eb": 0.9
         },
         "abc": {
+            "used": true,
             "power_already": 0,
             "power_max": 0,
             "power_min": 0,
@@ -261,6 +274,7 @@
             "beta_abc": 0.3
         },
         "ac": {
+            "used": true,
             "power_already": 0,
             "power_max": 0,
             "power_min": 0,
@@ -269,6 +283,7 @@
             "beta_ac": 4
         },
         "hp": {
+            "used": true,
             "power_already": 0,
             "power_max": 0,
             "power_min": 0,
@@ -278,6 +293,7 @@
             "beta_hpq": 4
         },
         "ghp": {
+            "used": true,
             "power_already": 0,
             "balance_flag": 0,
             "power_max": 10000,
@@ -288,6 +304,7 @@
             "beta_ghpq": 4.5
         },
         "ghp_deep": {
+            "used": true,
             "power_already": 0,
             "power_max": 10000,
             "power_min": 0,
@@ -296,6 +313,7 @@
             "beta_ghpg": 6
         },
         "gtw": {
+            "used": true,
             "number_already": 0,
             "number_max": 10000,
             "number_min": 0,
@@ -304,6 +322,7 @@
             "beta_gtw": 7
         },
         "gtw2500": {
+            "used": true,
             "number_already": 0,
             "number_max": 10,
             "number_min": 0,
@@ -312,6 +331,7 @@
             "beta_gtw": 410
         },
         "hp120": {
+            "used": true,
             "power_already": 0,
             "power_max": 10000,
             "power_min": 0,
@@ -322,6 +342,7 @@
             "temperature_out": 120
         },
         "co180": {
+            "used": true,
             "power_already": 0,
             "power_max": 10000,
             "power_min": 0,
@@ -332,6 +353,7 @@
             "temperature_out": 180
         },
         "whp": {
+            "used": true,
             "power_already": 0,
             "power_max": 2000,
             "power_min": 0,
@@ -344,7 +366,7 @@
     "custom_device_storage": [
         {
             "device_name": "储热罐2型",
-            "energy_type": "热",
+            "energy_type": "1",
             "device_already": 0,
             "device_max": 500000,
             "device_min": 0,
@@ -358,7 +380,7 @@
         },
         {
             "device_name": "储冷罐2型",
-            "energy_type": "冷",
+            "energy_type": "2",
             "device_already": 0,
             "device_max": 500000,
             "device_min": 0,
@@ -372,7 +394,7 @@
         },
         {
             "device_name": "蓄电池2型",
-            "energy_type": "电",
+            "energy_type": "0",
             "device_already": 0,
             "device_max": 20000,
             "device_min": 0,

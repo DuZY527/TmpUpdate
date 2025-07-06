@@ -366,8 +366,9 @@ class ISService:
             cop_out2standard_ced[i] = ced_data[i]["energy_out_standard_per_unit"]
         for i in range(num_custom_storage_device):
             device = csd_data[i]
-            if device["energy_type"] not in energy_type_list:
-                raise ValueError(f"Invalid energy type '{device['energy_type']}' in custom storage device.")
+            # device["energy_type"] 理论为 0-6（energy_type_list） 的整数，要判断它是否在这个范围内
+            if int(device["energy_type"]) < 0 or int(device["energy_type"]) >= energy_type_num:
+                raise ValueError(f"Invalid energy type index '{device['energy_type']}' in custom storage device.")
             # 获取能量类型索引
             csd_energy_type_index[i] = int(device["energy_type"])
             k_install2sto_max_csd[i] = device["energy_storage_max_per_unit"]
@@ -1243,20 +1244,20 @@ class ISService:
         custom_exchange = []
         for i in range(num_custom_storage_device):
             device = csd_data[i]
-            energy_type_index = energy_type_list.index(device["energy_type"])
+            energy_type_index = int(device["energy_type"])
             custom_storage_installed.append({
                 "device_name": device["device_name"],
-                "energy_type": device["energy_type"],
+                "energy_type": energy_type_list[energy_type_index],
                 "installed_capacity": m.getVal(csd_install[i])
             })
             custom_storage_capex.append({
                 "device_name": device["device_name"],
-                "energy_type": device["energy_type"],
+                "energy_type": energy_type_list[energy_type_index],
                 "capex": m.getVal(csd_install[i]) * cost_csd[i]
             })
             custom_storage.append({
                 "device_name": device["device_name"],
-                "energy_type": device["energy_type"],
+                "energy_type": energy_type_list[energy_type_index],
                 "storage_state": [m.getVal(csd_sto[i][t]) for t in range(period)],
                 "storage_in": [m.getVal(csd_energy_in[i][energy_type_index][t]) for t in range(period)],
                 "storage_out": [m.getVal(csd_energy_out[i][energy_type_index][t]) for t in range(period)],
